@@ -16,15 +16,19 @@ import type { NorwayTopologyType } from './useTopology'
  * presimplify at runtime once per loaded topology (a few tens of ms) rather
  * than relying on the bundled data's own simplification metadata.
  *
- * detalj = 100 → minWeight = 0           (full presimplified detail, nothing removed)
- * detalj = 0   → minWeight = max weight  (most aggressive simplification)
+ * detalj = 100 → minWeight ≈ 0         (full detail, nothing removed — early return)
+ * detalj = 0   → minWeight = max weight (most aggressive simplification)
+ *
+ * topojson-simplify's quantile() sorts weights in DESCENDING order, so p=0
+ * returns the maximum weight and p=1 returns the minimum. We therefore map
+ * detailPercent directly to p (not 1-p) to get the intended behaviour.
  */
 export function useSimplifiedTopology(topology: NorwayTopologyType, detailPercent: number): NorwayTopologyType {
   const presimplified = useMemo(() => topojsonSimplify.presimplify(topology), [topology])
 
   return useMemo(() => {
     if (detailPercent >= 100) return presimplified
-    const quantile = 1 - detailPercent / 100
+    const quantile = detailPercent / 100
     const minWeight = topojsonSimplify.quantile(presimplified, quantile)
     return topojsonSimplify.simplify(presimplified, minWeight)
   }, [presimplified, detailPercent])
