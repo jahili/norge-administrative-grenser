@@ -14,8 +14,13 @@
 // https://wfs.geonorge.no/skwms1/wfs.administrative_enheter (FeatureTypes
 // app:Fylke / app:Kommune) — note that service only returns GML, so an extra
 // GML → GeoJSON conversion step (e.g. via ogr2ogr) would be required.
+//
+// The coastline-clipped ("uten havgrense") layers are not available for free
+// download from Kartverket's APIs at adequate precision for Norway's complex
+// fjord coastline. Instead, they are committed as source files in
+// data-pipeline/source/ and copied here into raw/ for use by the pipeline.
 
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { createWriteStream, existsSync } from 'node:fs'
 import { Readable } from 'node:stream'
 import { finished } from 'node:stream/promises'
@@ -25,8 +30,9 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rawDir = path.join(__dirname, '..', 'raw')
+const sourceDir = path.join(__dirname, '..', 'source')
 
-const sources = [
+const zipSources = [
   {
     name: 'fylker',
     url: 'https://nedlasting.geonorge.no/geonorge/Basisdata/Fylker/GeoJSON/Basisdata_0000_Norge_4258_Fylker_GeoJSON.zip',
@@ -39,9 +45,15 @@ const sources = [
   },
 ]
 
+// Files in source/ are committed to the repository and simply copied to raw/.
+const fileSources = [
+  { name: 'kommuner-uten-havgrense' },
+  { name: 'fylker-uten-havgrense' },
+]
+
 await mkdir(rawDir, { recursive: true })
 
-for (const source of sources) {
+for (const source of zipSources) {
   const zipPath = path.join(rawDir, `${source.name}.zip`)
   const extractDir = path.join(rawDir, source.name)
   const finalPath = path.join(rawDir, `${source.name}.geojson`)
@@ -71,4 +83,22 @@ for (const source of sources) {
   await rm(zipPath, { force: true })
   await rm(extractDir, { recursive: true, force: true })
   console.log(`[done] wrote ${path.relative(process.cwd(), finalPath)}`)
+}
+
+for (const source of fileSources) {
+  const srcPath = path.join(sourceDir, `${source.name}.geojson`)
+  const dstPath = path.join(rawDir, `${source.name}.geojson`)
+
+  if (existsSync(dstPath)) {
+    console.log(`[skip] ${source.name}.geojson already present`)
+    continue
+  }
+
+  if (!existsSync(srcPath)) {
+    throw new Error(`Missing source file: ${srcPath} — commit it to data-pipeline/source/ first`)
+  }
+
+  console.log(`[copy] ${source.name}.geojson from source/`)
+  await copyFile(srcPath, dstPath)
+  console.log(`[done] copied ${source.name}.geojson`)
 }

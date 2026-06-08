@@ -5,12 +5,13 @@ import { useSelection } from './hooks/useSelection'
 import { useSimplifiedTopology } from './hooks/useSimplifiedTopology'
 import { FylkeSelector } from './components/FylkeSelector'
 import { KommuneSelector } from './components/KommuneSelector'
+import { HavgrenseToggle } from './components/HavgrenseToggle'
 import { MapPreview } from './components/MapPreview'
 import { SimplificationControl } from './components/SimplificationControl'
 import { ExportPanel } from './components/ExportPanel'
 import { selectedFeatureCollection, buildExport, downloadBlob } from './lib/exportData'
-import { selectionFilenameStem } from './lib/filename'
-import type { ExportFormat, AreaGeometry, FylkeProperties } from './lib/types'
+import { selectionFilenameStem, fylkeSelectionFilenameStem } from './lib/filename'
+import type { ExportFormat, ExportGranularity, AreaGeometry, FylkeProperties, KommuneProperties } from './lib/types'
 import type { FeatureCollection } from 'geojson'
 
 function App() {
@@ -54,12 +55,21 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
   const selection = useSelection(fylker, kommunerByFylke)
   const [detailPercent, setDetailPercent] = useState(100)
   const [format, setFormat] = useState<ExportFormat>('geojson')
+  const [granularity, setGranularity] = useState<ExportGranularity>('kommuner')
+  // The bundled topology carries both variants of every fylke/kommune — the
+  // official borders (extending out to the maritime "havgrense") and borders
+  // clipped to the coastline. Defaulting to "uten havgrense" since that's
+  // what most users want for visualisation; the toggle covers the rest.
+  const [medHavgrense, setMedHavgrense] = useState(false)
 
   const simplifiedTopology = useSimplifiedTopology(topology, detailPercent)
 
+  const kommuneObject = medHavgrense ? 'kommuner' : 'kommunerUtenHavgrense'
+  const fylkeObject = medHavgrense ? 'fylker' : 'fylkerUtenHavgrense'
+
   const selectedFeatures = useMemo(
-    () => selectedFeatureCollection(simplifiedTopology, selection.selectedKommuner),
-    [simplifiedTopology, selection.selectedKommuner],
+    () => selectedFeatureCollection(simplifiedTopology, kommuneObject, selection.selectedKommuner),
+    [simplifiedTopology, kommuneObject, selection.selectedKommuner],
   )
 
   const contextFylker = useMemo<FeatureCollection<AreaGeometry, FylkeProperties>>(() => {
@@ -67,7 +77,7 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
     // and MultiPolygon (mainland-only vs. areas with islands); topojson-client's
     // return type is the broader Geometry union because TopoJSON doesn't
     // statically guarantee either shape.
-    const all = topojsonClient.feature(simplifiedTopology, simplifiedTopology.objects.fylker) as FeatureCollection<
+    const all = topojsonClient.feature(simplifiedTopology, simplifiedTopology.objects[fylkeObject]) as FeatureCollection<
       AreaGeometry,
       FylkeProperties
     >
@@ -75,26 +85,40 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
       type: 'FeatureCollection',
       features: all.features.filter((f) => selection.selectedFylker.has(f.properties.fylkesnummer)),
     }
-  }, [simplifiedTopology, selection.selectedFylker])
+  }, [simplifiedTopology, fylkeObject, selection.selectedFylker])
+
+  // Whole fylker can be exported either as themselves or broken down into
+  // their kommuner — only offer the choice when at least one whole fylke is
+  // selected (otherwise there's nothing to export at fylke granularity).
+  const showGranularityChoice = selection.selectedFylker.size > 0
+  const effectiveGranularity: ExportGranularity = showGranularityChoice ? granularity : 'kommuner'
+
+  const exportTarget = useMemo<
+    | { granularity: 'fylker'; features: FeatureCollection<AreaGeometry, FylkeProperties> }
+    | { granularity: 'kommuner'; features: FeatureCollection<AreaGeometry, KommuneProperties> }
+  >(() => {
+    if (effectiveGranularity === 'fylker') return { granularity: 'fylker', features: contextFylker }
+    return { granularity: 'kommuner', features: selectedFeatures }
+  }, [effectiveGranularity, contextFylker, selectedFeatures])
 
   const exportResult = useMemo(
-    () => (selectedFeatures.features.length > 0 ? buildExport(selectedFeatures, format) : null),
-    [selectedFeatures, format],
-  )
-
-  const filenameStem = useMemo(
     () =>
-      selectedFeatures.features.length > 0
-        ? selectionFilenameStem(selectedFeatures.features.map((f) => f.properties), fylker, kommunerByFylke)
+      exportTarget.features.features.length > 0
+        ? buildExport(exportTarget.features, exportTarget.granularity, format)
         : null,
-    [selectedFeatures, fylker, kommunerByFylke],
+    [exportTarget, format],
   )
 
-  const filename =
-    filenameStem && exportResult ? `${filenameStem}.${exportResult.extension}` : null
+  const filenameStem = useMemo(() => {
+    if (exportTarget.features.features.length === 0) return null
+    if (exportTarget.granularity === 'fylker') {
+      return fylkeSelectionFilenameStem(exportTarget.features.features.map((f) => f.properties))
+    }
+    return selectionFilenameStem(exportTarget.features.features.map((f) => f.properties), fylker, kommunerByFylke)
+  }, [exportTarget, fylker, kommunerByFylke])
 
-  function handleDownload() {
-    if (!exportResult || !filename) return
+  function handleDownload(filename: string) {
+    if (!exportResult) return
     downloadBlob(exportResult.blob, filename)
   }
 
@@ -106,9 +130,16 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
       </div>
 
       <div className="flex flex-col gap-6">
+        <HavgrenseToggle medHavgrense={medHavgrense} onChange={setMedHavgrense} />
+
         <section aria-label="Kartforhåndsvisning">
           <h2 className="mb-2 text-sm font-semibold text-slate-900">Forhåndsvisning</h2>
-          <MapPreview selectedFeatures={selectedFeatures} contextFylker={contextFylker} />
+          <MapPreview
+            selectedFeatures={selectedFeatures}
+            contextFylker={contextFylker}
+            detailPercent={detailPercent}
+            havgrenseKey={medHavgrense ? 'med' : 'uten'}
+          />
           <p className="mt-2 text-sm text-slate-500">
             {selectedFeatures.features.length === 0
               ? 'Ingen kommuner valgt ennå.'
@@ -123,11 +154,16 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
         />
 
         <ExportPanel
+          key={filenameStem ?? 'no-selection'}
           format={format}
           onFormatChange={setFormat}
+          granularity={effectiveGranularity}
+          onGranularityChange={setGranularity}
+          showGranularityChoice={showGranularityChoice}
           onDownload={handleDownload}
           disabled={!exportResult}
-          filename={filename}
+          defaultFilenameStem={filenameStem}
+          extension={exportResult?.extension ?? null}
         />
       </div>
     </div>

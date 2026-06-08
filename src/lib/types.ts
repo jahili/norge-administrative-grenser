@@ -16,3 +16,6 @@ export interface KommuneProperties {
 }
 
 export type ExportFormat = 'geojson' | 'topojson'
+
+/** Whether the export contains whole fylke polygons or kommune-level subdivisions. */
+export type ExportGranularity = 'fylker' | 'kommuner'

@@ -40,3 +40,16 @@ export function selectionFilenameStem(
 
   return `${selectedKommuner.length}-kommuner-utvalg`
 }
+
+/**
+ * Builds a filename stem for a fylke-level export (whole fylkesgrenser, not
+ * broken down into kommuner):
+ *  - one fylke selected   → "akershus-fylke"
+ *  - several fylker       → "n-fylker-utvalg"
+ */
+export function fylkeSelectionFilenameStem(selectedFylker: FylkeProperties[]): string {
+  if (selectedFylker.length === 1) {
+    return `${slugify(selectedFylker[0].fylkesnavn)}-fylke`
+  }
+  return `${selectedFylker.length}-fylker-utvalg`
+}

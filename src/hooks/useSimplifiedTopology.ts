@@ -1,12 +1,6 @@
 import { useMemo } from 'react'
 import * as topojsonSimplify from 'topojson-simplify'
-import type { GeometryCollection, Topology } from 'topojson-specification'
-import type { FylkeProperties, KommuneProperties } from '../lib/types'
-
-type NorwayTopologyType = Topology<{
-  fylker: GeometryCollection<FylkeProperties>
-  kommuner: GeometryCollection<KommuneProperties>
-}>
+import type { NorwayTopologyType } from './useTopology'
 
 /**
  * Lets the user dial in detail reduction at runtime via `topojson-simplify`,

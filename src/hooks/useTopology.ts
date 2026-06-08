@@ -3,11 +3,15 @@ import type { GeometryCollection, Topology } from 'topojson-specification'
 import topologyUrl from '../assets/norge-grenser.topojson?url'
 import type { FylkeProperties, KommuneProperties } from '../lib/types'
 
+export type NorwayTopologyType = Topology<{
+  fylker: GeometryCollection<FylkeProperties>
+  kommuner: GeometryCollection<KommuneProperties>
+  fylkerUtenHavgrense: GeometryCollection<FylkeProperties>
+  kommunerUtenHavgrense: GeometryCollection<KommuneProperties>
+}>
+
 export interface NorwayTopology {
-  topology: Topology<{
-    fylker: GeometryCollection<FylkeProperties>
-    kommuner: GeometryCollection<KommuneProperties>
-  }>
+  topology: NorwayTopologyType
   fylker: FylkeProperties[]
   kommuner: KommuneProperties[]
   kommunerByFylke: Map<string, KommuneProperties[]>

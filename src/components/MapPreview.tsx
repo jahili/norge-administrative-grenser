@@ -7,17 +7,24 @@ import type { AreaGeometry, FylkeProperties, KommuneProperties } from '../lib/ty
 interface MapPreviewProps {
   selectedFeatures: FeatureCollection<AreaGeometry, KommuneProperties>
   contextFylker: FeatureCollection<AreaGeometry, FylkeProperties>
+  detailPercent: number
+  /** Identifies which geometry variant is in play ("med"/"uten" havgrense), so the layer remounts when it changes. */
+  havgrenseKey: string
 }
 
 const NORWAY_CENTER: [number, number] = [64.5, 13]
 const NORWAY_ZOOM = 4
 
-export function MapPreview({ selectedFeatures, contextFylker }: MapPreviewProps) {
+export function MapPreview({ selectedFeatures, contextFylker, detailPercent, havgrenseKey }: MapPreviewProps) {
   const mapRef = useRef<LeafletMap | null>(null)
 
-  // Re-key the GeoJSON layer whenever the selection changes shape, so Leaflet
-  // replaces (rather than diffs) the layer — much simpler and fast enough at
-  // this data size.
+  // Re-key the GeoJSON layers whenever the selection, the simplification
+  // level, or the havgrense variant changes, so Leaflet replaces (rather
+  // than diffs) the layer — much simpler and fast enough at this data size.
+  // React-Leaflet's <GeoJSON> does not re-render its shapes when only `data`
+  // changes underneath the same key, so anything that changes the underlying
+  // geometry (not just which features are included) must be part of the key,
+  // or the preview would keep showing stale shapes.
   const selectionKey = useMemo(
     () => selectedFeatures.features.map((f) => f.properties.kommunenummer).join(','),
     [selectedFeatures],
@@ -51,14 +58,14 @@ export function MapPreview({ selectedFeatures, contextFylker }: MapPreviewProps)
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <GeoJSON
-          key={`fylker-${contextFylker.features.length}`}
+          key={`fylker-${contextFylker.features.length}-${detailPercent}-${havgrenseKey}`}
           data={contextFylker}
           style={() => ({ color: '#94a3b8', weight: 1, fill: false, dashArray: '4 3' })}
           interactive={false}
         />
         {selectedFeatures.features.length > 0 && (
           <GeoJSON
-            key={`kommuner-${selectionKey}`}
+            key={`kommuner-${selectionKey}-${detailPercent}-${havgrenseKey}`}
             data={selectedFeatures}
             style={() => ({ color: '#1d4ed8', weight: 1.5, fillColor: '#3b82f6', fillOpacity: 0.45 })}
             onEachFeature={(feature: Feature<AreaGeometry, KommuneProperties>, layer) => {
