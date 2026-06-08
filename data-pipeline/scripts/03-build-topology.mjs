@@ -70,7 +70,7 @@ const args = [
   '-simplify',
   'visvalingam',
   'keep-shapes',
-  '5%',
+  '20%',
   '-o',
   outFile,
   'format=topojson',
