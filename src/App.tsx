@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import * as topojsonClient from 'topojson-client'
 import { useTopology } from './hooks/useTopology'
+import type { NorwayTopologyType } from './hooks/useTopology'
 import { useSelection } from './hooks/useSelection'
 import { useSimplifiedTopology } from './hooks/useSimplifiedTopology'
 import { FylkeSelector } from './components/FylkeSelector'
@@ -21,7 +22,14 @@ import {
   fylkeSelectionFilenameStem,
   bydelSelectionFilenameStem,
 } from './lib/filename'
-import type { ExportFormat, ExportGranularity, AreaGeometry, FylkeProperties, KommuneProperties } from './lib/types'
+import type {
+  ExportFormat,
+  ExportGranularity,
+  AreaGeometry,
+  BydelProperties,
+  FylkeProperties,
+  KommuneProperties,
+} from './lib/types'
 import type { FeatureCollection } from 'geojson'
 
 function App() {
@@ -40,9 +48,12 @@ function App() {
 
       <main className="mt-6">
         {topologyState.status === 'loading' && (
-          <p role="status" className="text-slate-600">
-            Laster inn kart­data …
-          </p>
+          <div className="flex items-center gap-3 py-10">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+            <p role="status" className="text-slate-600">
+              Laster inn kartdata (2,8 MB) …
+            </p>
+          </div>
         )}
         {topologyState.status === 'error' && (
           <p role="alert" className="text-red-700">
@@ -51,16 +62,34 @@ function App() {
         )}
         {topologyState.status === 'ready' && <Workspace {...topologyState} />}
       </main>
+
+      <footer className="mt-10 border-t border-slate-100 pt-6 text-xs text-slate-400">
+        <p>
+          Grensedata fra{' '}
+          <a
+            href="https://kartverket.no"
+            className="underline hover:text-slate-600"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Kartverket
+          </a>
+          . Bydelsdata tilgjengelig for Bergen, Fredrikstad, Kristiansand, Oslo, Stavanger og
+          Trondheim — kommuner med bydeler er merket med{' '}
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 align-middle" /> i
+          kommunelisten.
+        </p>
+      </footer>
     </div>
   )
 }
 
 interface WorkspaceProps {
-  topology: import('./hooks/useTopology').NorwayTopology['topology']
-  fylker: import('./lib/types').FylkeProperties[]
-  kommuner: import('./lib/types').KommuneProperties[]
-  kommunerByFylke: Map<string, import('./lib/types').KommuneProperties[]>
-  bydelsByKommune: Map<string, import('./lib/types').BydelProperties[]>
+  topology: NorwayTopologyType
+  fylker: FylkeProperties[]
+  kommuner: KommuneProperties[]
+  kommunerByFylke: Map<string, KommuneProperties[]>
+  bydelsByKommune: Map<string, BydelProperties[]>
 }
 
 function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommune }: WorkspaceProps) {
@@ -68,10 +97,6 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
   const [detailPercent, setDetailPercent] = useState(100)
   const [format, setFormat] = useState<ExportFormat>('geojson')
   const [granularity, setGranularity] = useState<ExportGranularity>('kommuner')
-  // The bundled topology carries both variants of every fylke/kommune — the
-  // official borders (extending out to the maritime "havgrense") and borders
-  // clipped to the coastline. Defaulting to "uten havgrense" since that's
-  // what most users want for visualisation; the toggle covers the rest.
   const [medHavgrense, setMedHavgrense] = useState(false)
 
   const simplifiedTopology = useSimplifiedTopology(topology, detailPercent)
@@ -85,10 +110,6 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
   )
 
   const contextFylker = useMemo<FeatureCollection<AreaGeometry, FylkeProperties>>(() => {
-    // Fylke and kommune geometries in our bundled dataset are a mix of Polygon
-    // and MultiPolygon (mainland-only vs. areas with islands); topojson-client's
-    // return type is the broader Geometry union because TopoJSON doesn't
-    // statically guarantee either shape.
     const all = topojsonClient.feature(simplifiedTopology, simplifiedTopology.objects[fylkeObject]) as FeatureCollection<
       AreaGeometry,
       FylkeProperties
@@ -99,13 +120,11 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
     }
   }, [simplifiedTopology, fylkeObject, selection.selectedFylker])
 
-  // Selected bydeler extracted from the simplified topology for preview + export.
   const selectedBydelFeatures = useMemo(
     () => selectedBydelFeatureCollection(simplifiedTopology, selection.selectedBydeler),
     [simplifiedTopology, selection.selectedBydeler],
   )
 
-  // Which of the currently selected kommuner have bydeler in our dataset?
   const kommunerMedBydeler = useMemo(
     () =>
       kommuner.filter(
@@ -115,12 +134,6 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
   )
 
   const hasBydelChoice = kommunerMedBydeler.length > 0
-  // The bydel selector appears as step 3, which pushes the export to step 4.
-  const exportStep = hasBydelChoice ? 4 : 3
-
-  // Whole fylker can be exported either as themselves or broken down into
-  // their kommuner — only offer the choice when at least one whole fylke is
-  // selected (otherwise there's nothing to export at fylke granularity).
   const showGranularityChoice = selection.selectedFylker.size > 0
 
   const effectiveGranularity: ExportGranularity = (() => {
@@ -132,7 +145,7 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
   const exportTarget = useMemo<
     | { granularity: 'fylker'; features: FeatureCollection<AreaGeometry, FylkeProperties> }
     | { granularity: 'kommuner'; features: FeatureCollection<AreaGeometry, KommuneProperties> }
-    | { granularity: 'bydeler'; features: FeatureCollection<AreaGeometry, import('./lib/types').BydelProperties> }
+    | { granularity: 'bydeler'; features: FeatureCollection<AreaGeometry, BydelProperties> }
   >(() => {
     if (effectiveGranularity === 'fylker') return { granularity: 'fylker', features: contextFylker }
     if (effectiveGranularity === 'bydeler') return { granularity: 'bydeler', features: selectedBydelFeatures }
@@ -162,7 +175,6 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
     return selectionFilenameStem(exportTarget.features.features.map((f) => f.properties), fylker, kommunerByFylke)
   }, [exportTarget, fylker, kommuner, kommunerByFylke, bydelsByKommune])
 
-  // Map preview shows bydeler when that granularity is active, otherwise kommuner.
   const previewFeatures = effectiveGranularity === 'bydeler' ? selectedBydelFeatures : selectedFeatures
   const previewCount = previewFeatures.features.length
   const previewLabel =
@@ -181,9 +193,15 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* Left column: selection steps */}
       <div className="flex flex-col gap-6">
         <FylkeSelector fylker={fylker} selection={selection} />
-        <KommuneSelector fylker={fylker} kommunerByFylke={kommunerByFylke} selection={selection} />
+        <KommuneSelector
+          fylker={fylker}
+          kommunerByFylke={kommunerByFylke}
+          bydelsByKommune={bydelsByKommune}
+          selection={selection}
+        />
         <BydelSelector
           kommunerMedBydeler={kommunerMedBydeler}
           bydelsByKommune={bydelsByKommune}
@@ -191,9 +209,8 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
         />
       </div>
 
+      {/* Right column: preview + output settings */}
       <div className="flex flex-col gap-6">
-        <HavgrenseToggle medHavgrense={medHavgrense} onChange={setMedHavgrense} />
-
         <section aria-label="Kartforhåndsvisning">
           <h2 className="mb-2 text-sm font-semibold text-slate-900">Forhåndsvisning</h2>
           <MapPreview
@@ -204,6 +221,8 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
           />
           <p className="mt-2 text-sm text-slate-500">{previewLabel}</p>
         </section>
+
+        <HavgrenseToggle medHavgrense={medHavgrense} onChange={setMedHavgrense} />
 
         <SimplificationControl
           detailPercent={detailPercent}
@@ -223,7 +242,6 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
           disabled={!exportResult}
           defaultFilenameStem={filenameStem}
           extension={exportResult?.extension ?? null}
-          step={exportStep}
         />
       </div>
     </div>

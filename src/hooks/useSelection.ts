@@ -8,12 +8,13 @@ interface SelectionState {
 }
 
 type SelectionAction =
-  | { type: 'toggle-fylke'; fylkesnummer: string; kommuner: KommuneProperties[] }
+  | { type: 'toggle-fylke'; fylkesnummer: string; kommuner: KommuneProperties[]; bydelsByKommune: Map<string, BydelProperties[]> }
   | { type: 'toggle-all-fylker'; allFylkesnummer: string[] }
   | { type: 'toggle-kommune'; kommunenummer: string; bydeler: BydelProperties[] }
   | { type: 'toggle-all-in-fylke'; kommuner: KommuneProperties[]; bydelsByKommune: Map<string, BydelProperties[]> }
   | { type: 'toggle-bydel'; bydelnummer: string }
   | { type: 'toggle-all-bydeler-in-kommune'; bydeler: BydelProperties[] }
+  | { type: 'clear-all-bydeler' }
 
 function withToggled(set: Set<string>, id: string): Set<string> {
   const next = new Set(set)
@@ -40,7 +41,8 @@ function reducer(state: SelectionState, action: SelectionAction): SelectionState
       let selectedBydeler = state.selectedBydeler
       for (const kommune of action.kommuner) {
         selectedKommuner.delete(kommune.kommunenummer)
-        selectedBydeler = withoutBydelerFor(selectedBydeler, [])
+        const bydeler = action.bydelsByKommune.get(kommune.kommunenummer) ?? []
+        selectedBydeler = withoutBydelerFor(selectedBydeler, bydeler)
       }
       return { selectedFylker, selectedKommuner, selectedBydeler }
     }
@@ -68,7 +70,6 @@ function reducer(state: SelectionState, action: SelectionAction): SelectionState
       for (const kommune of action.kommuner) {
         if (allSelected) {
           selectedKommuner.delete(kommune.kommunenummer)
-          // Remove bydeler for deselected kommuner
           const bydeler = action.bydelsByKommune.get(kommune.kommunenummer) ?? []
           selectedBydeler = withoutBydelerFor(selectedBydeler, bydeler)
         } else {
@@ -89,6 +90,9 @@ function reducer(state: SelectionState, action: SelectionAction): SelectionState
         else selectedBydeler.add(id)
       }
       return { ...state, selectedBydeler }
+    }
+    case 'clear-all-bydeler': {
+      return { ...state, selectedBydeler: new Set() }
     }
   }
 }
@@ -118,7 +122,7 @@ export function useSelection(
     allFylkerSelected,
     someFylkerSelected,
     toggleFylke: (fylkesnummer: string) =>
-      dispatch({ type: 'toggle-fylke', fylkesnummer, kommuner: kommunerByFylke.get(fylkesnummer) ?? [] }),
+      dispatch({ type: 'toggle-fylke', fylkesnummer, kommuner: kommunerByFylke.get(fylkesnummer) ?? [], bydelsByKommune }),
     toggleAllFylker: () => dispatch({ type: 'toggle-all-fylker', allFylkesnummer }),
     toggleKommune: (kommunenummer: string) =>
       dispatch({ type: 'toggle-kommune', kommunenummer, bydeler: bydelsByKommune.get(kommunenummer) ?? [] }),
@@ -131,6 +135,7 @@ export function useSelection(
     toggleBydel: (bydelnummer: string) => dispatch({ type: 'toggle-bydel', bydelnummer }),
     toggleAllBydelerInKommune: (kommunenummer: string) =>
       dispatch({ type: 'toggle-all-bydeler-in-kommune', bydeler: bydelsByKommune.get(kommunenummer) ?? [] }),
+    clearAllBydeler: () => dispatch({ type: 'clear-all-bydeler' }),
   }
 }
 

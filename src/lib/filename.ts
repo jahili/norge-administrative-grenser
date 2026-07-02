@@ -70,9 +70,9 @@ export function bydelSelectionFilenameStem(
   }
 
   if (selectedBydeler.length > 1) {
-    const kommunenumreInSelection = new Set(selectedBydeler.map((b) => b.kommunenummer))
-    if (kommunenumreInSelection.size === 1) {
-      const [kommunenummer] = kommunenumreInSelection
+    const kommunenummerInSelection = new Set(selectedBydeler.map((b) => b.kommunenummer))
+    if (kommunenummerInSelection.size === 1) {
+      const [kommunenummer] = kommunenummerInSelection
       const allBydelerInKommune = bydelsByKommune.get(kommunenummer) ?? []
       if (allBydelerInKommune.length === selectedBydeler.length) {
         const kommune = kommuner.find((k) => k.kommunenummer === kommunenummer)

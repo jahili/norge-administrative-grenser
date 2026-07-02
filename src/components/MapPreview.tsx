@@ -6,8 +6,6 @@ import type { AreaGeometry, BydelProperties, FylkeProperties, KommuneProperties 
 
 type SelectedProperties = KommuneProperties | BydelProperties
 
-/** Returns a stable string key and tooltip label for a selected feature, regardless
- *  of whether it is a kommune or a bydel. */
 function featureId(props: SelectedProperties): string {
   return 'kommunenummer' in props && 'fylkesnummer' in props ? props.kommunenummer : (props as BydelProperties).bydelnummer
 }
@@ -19,7 +17,6 @@ interface MapPreviewProps {
   selectedFeatures: FeatureCollection<AreaGeometry, SelectedProperties>
   contextFylker: FeatureCollection<AreaGeometry, FylkeProperties>
   detailPercent: number
-  /** Identifies which geometry variant is in play ("med"/"uten" havgrense), so the layer remounts when it changes. */
   havgrenseKey: string
 }
 
@@ -29,13 +26,6 @@ const NORWAY_ZOOM = 4
 export function MapPreview({ selectedFeatures, contextFylker, detailPercent, havgrenseKey }: MapPreviewProps) {
   const mapRef = useRef<LeafletMap | null>(null)
 
-  // Re-key the GeoJSON layers whenever the selection, the simplification
-  // level, or the havgrense variant changes, so Leaflet replaces (rather
-  // than diffs) the layer — much simpler and fast enough at this data size.
-  // React-Leaflet's <GeoJSON> does not re-render its shapes when only `data`
-  // changes underneath the same key, so anything that changes the underlying
-  // geometry (not just which features are included) must be part of the key,
-  // or the preview would keep showing stale shapes.
   const selectionKey = useMemo(
     () => selectedFeatures.features.map((f) => featureId(f.properties)).join(','),
     [selectedFeatures],
@@ -44,15 +34,20 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    if (selectedFeatures.features.length === 0) {
+
+    // Prefer zooming to the selected features (kommuner/bydeler); fall back to
+    // the fylke outlines so selecting a fylke without any kommuner still zooms.
+    const zoomTarget =
+      selectedFeatures.features.length > 0 ? selectedFeatures : contextFylker
+
+    if (zoomTarget.features.length === 0) {
       map.setView(NORWAY_CENTER, NORWAY_ZOOM)
       return
     }
-    // Compute bounds from the feature collection directly (avoids creating a
-    // throwaway Leaflet layer just to read its bounds).
-    const bounds = featureCollectionBounds(selectedFeatures)
+
+    const bounds = featureCollectionBounds(zoomTarget)
     if (bounds) map.fitBounds(bounds, { padding: [24, 24] })
-  }, [selectedFeatures])
+  }, [selectedFeatures, contextFylker])
 
   return (
     <div>
@@ -86,7 +81,6 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
         )}
       </MapContainer>
 
-      {/* Non-visual summary so the selection is available without the map. */}
       <p className="sr-only" aria-live="polite">
         {selectedFeatures.features.length === 0
           ? 'Ingen kommuner er valgt ennå. Kartet viser hele Norge.'
@@ -98,7 +92,6 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
   )
 }
 
-/** Yields every ring (coordinate position array) in a Polygon or MultiPolygon, regardless of nesting depth. */
 function* ringsOf(geometry: AreaGeometry): Generator<Position[]> {
   const polygons = geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates
   for (const polygon of polygons) {

@@ -3,7 +3,6 @@ import type { BydelProperties, KommuneProperties } from '../lib/types'
 import type { SelectionApi } from '../hooks/useSelection'
 
 interface BydelSelectorProps {
-  /** Only the selected kommuner that have bydeler are passed here. */
   kommunerMedBydeler: KommuneProperties[]
   bydelsByKommune: Map<string, BydelProperties[]>
   selection: SelectionApi
@@ -12,11 +11,28 @@ interface BydelSelectorProps {
 export function BydelSelector({ kommunerMedBydeler, bydelsByKommune, selection }: BydelSelectorProps) {
   if (kommunerMedBydeler.length === 0) return null
 
+  const anySelected = selection.selectedBydeler.size > 0
+
   return (
     <fieldset className="rounded-lg border border-slate-200 p-4">
       <legend className="px-1 text-sm font-semibold text-slate-900">3. Velg bydeler (valgfritt)</legend>
 
-      <div className="mt-2 flex flex-col gap-4">
+      <div className="mt-2 flex items-center justify-between">
+        <p className="text-xs text-slate-500">
+          Kystlinje-valget gjelder ikke for bydeler — de følger alltid kystlinjen.
+        </p>
+        {anySelected && (
+          <button
+            type="button"
+            onClick={selection.clearAllBydeler}
+            className="ml-4 shrink-0 text-xs text-slate-400 underline hover:text-slate-600"
+          >
+            Fjern alle
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 flex flex-col gap-4">
         {kommunerMedBydeler.map((kommune) => (
           <KommuneGroup
             key={kommune.kommunenummer}
