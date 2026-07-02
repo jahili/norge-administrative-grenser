@@ -8,9 +8,20 @@
       content="Velg norske fylker og kommuner, forhåndsvis dem på et kart, og last dem ned som GeoJSON eller TopoJSON."
     />
     <title>Norge – administrative grenser</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563eb'/><text x='5' y='24' font-size='20' font-weight='bold' fill='white' font-family='sans-serif'>N</text></svg>">
-    <script type="module" crossorigin src="/norge-administrative-grenser/assets/index-C_ymbAi2.js"></script>
-    <link rel="stylesheet" crossorigin href="/norge-administrative-grenser/assets/index-Cp-LSdor.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230f172a'/><path d='M9 23V9l14 14V9' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+    <script>
+      // Apply the theme before first paint to avoid flashing the wrong one.
+      // Mirrors the logic in src/hooks/useTheme.ts: explicit choice wins,
+      // otherwise follow the OS.
+      ;(function () {
+        var stored = localStorage.getItem('theme')
+        var dark = stored === 'dark' || (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.documentElement.classList.add('dark')
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+      })()
+    </script>
+    <script type="module" crossorigin src="/norge-administrative-grenser/assets/index-C4TJ8x9j.js"></script>
+    <link rel="stylesheet" crossorigin href="/norge-administrative-grenser/assets/index-CdOIQ0jj.css">
   </head>
   <body>
     <div id="root"></div>
