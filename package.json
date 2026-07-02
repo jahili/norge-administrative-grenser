@@ -14,7 +14,7 @@
     "data:copy": "node data-pipeline/scripts/04-copy-to-app.mjs",
     "data:build": "npm run data:download && npm run data:normalize && npm run data:topology && npm run data:copy",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist --dotfiles"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
