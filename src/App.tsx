@@ -48,14 +48,14 @@ function App() {
             viewBox="0 0 32 32"
             aria-hidden="true"
           >
-            <rect width="32" height="32" rx="7" className="fill-slate-900 dark:fill-slate-100" />
+            <rect width="32" height="32" rx="3" className="fill-slate-900 dark:fill-slate-100" />
             <path
               d="M9 23V9l14 14V9"
               fill="none"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="stroke-white dark:stroke-slate-900"
+              className="stroke-teal-400 dark:stroke-teal-700"
             />
           </svg>
           <div>
@@ -75,7 +75,7 @@ function App() {
       <main className="mt-8">
         {topologyState.status === 'loading' && (
           <div className="flex items-center gap-3 py-10">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900 dark:border-slate-700 dark:border-t-slate-100" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700 dark:border-slate-700 dark:border-t-teal-400" />
             <p role="status" className="text-slate-600 dark:text-slate-400">
               Laster inn kartdata (2,8 MB) …
             </p>
@@ -94,7 +94,7 @@ function App() {
           Grensedata fra{' '}
           <a
             href="https://kartverket.no"
-            className="underline hover:text-slate-600 dark:hover:text-slate-300"
+            className="underline hover:text-teal-700 dark:hover:text-teal-400"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -102,7 +102,7 @@ function App() {
           </a>
           . Bydelsdata tilgjengelig for Bergen, Fredrikstad, Kristiansand, Oslo, Stavanger og
           Trondheim — kommuner med bydeler er merket med{' '}
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400 align-middle dark:bg-slate-500" /> i
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-teal-600 align-middle dark:bg-teal-400" /> i
           kommunelisten.
         </p>
       </footer>

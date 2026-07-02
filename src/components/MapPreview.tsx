@@ -37,8 +37,8 @@ const TILES = {
 } as const
 
 const SELECTED_STYLE = {
-  light: { color: '#0f172a', weight: 1.5, fillColor: '#334155', fillOpacity: 0.4 },
-  dark: { color: '#f1f5f9', weight: 1.5, fillColor: '#cbd5e1', fillOpacity: 0.35 },
+  light: { color: '#0f766e', weight: 1.5, fillColor: '#14b8a6', fillOpacity: 0.4 },
+  dark: { color: '#5eead4', weight: 1.5, fillColor: '#2dd4bf', fillOpacity: 0.35 },
 } as const
 
 const CONTEXT_STYLE = {
@@ -85,7 +85,7 @@ export function MapPreview({
         center={NORWAY_CENTER}
         zoom={NORWAY_ZOOM}
         scrollWheelZoom
-        className="h-[420px] w-full rounded-xl border border-slate-200 dark:border-slate-800"
+        className="h-[420px] w-full rounded-sm border border-slate-200 dark:border-slate-800"
         ref={mapRef}
         aria-label="Forhåndsvisning av valgte områder på kart"
       >

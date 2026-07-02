@@ -31,21 +31,22 @@ body {
   position: relative;
 }
 
-/* Decorative low-poly backdrop: sparse polygon outlines echoing map geometry.
-   Kept to ~3% contrast so text and controls are unaffected (WCAG non-text
-   contrast rules only apply to meaningful graphics). */
+/* Decorative map-like backdrop: irregular "kommune" polygons with shared
+   borders, a dashed coastline and small place markers. Kept to ~3% contrast
+   so text and controls are unaffected (WCAG non-text contrast rules only
+   apply to meaningful graphics). */
 #root::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='560' viewBox='0 0 560 560'%3E%3Cg fill='none' stroke='%230f172a' stroke-opacity='0.05' stroke-width='1.2'%3E%3Cpath d='M40 90 L150 30 L210 130 Z'/%3E%3Cpath d='M210 130 L150 30 L320 70 Z'/%3E%3Cpath d='M430 40 L510 120 L390 160 Z'/%3E%3Cpath d='M60 330 L20 240 L140 260 Z'/%3E%3Cpath d='M480 300 L540 390 L420 400 L400 310 Z'/%3E%3Cpath d='M240 430 L330 380 L360 480 L260 520 Z'/%3E%3Cpath d='M100 480 L60 410 L170 430 Z'/%3E%3Ccircle cx='320' cy='70' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='140' cy='260' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='420' cy='400' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='210' cy='130' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 560px 560px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='720' viewBox='0 0 720 720'%3E%3Cg fill='none' stroke='%230f172a' stroke-opacity='0.05' stroke-width='1.2' stroke-linejoin='round'%3E%3Cpath d='M80 120 L138 92 L198 112 L232 78 L290 102 L302 158 L262 198 L272 248 L212 270 L152 242 L102 262 L70 200 Z'/%3E%3Cpath d='M302 158 L362 128 L432 150 L462 208 L422 268 L352 260 L272 248 L262 198 Z'/%3E%3Cpath d='M462 208 L530 180 L588 220 L570 290 L494 302 L422 268 Z'/%3E%3Cpath d='M520 420 L578 382 L650 400 L678 462 L638 522 L558 540 L512 488 Z'/%3E%3Cpath d='M118 478 L180 450 L222 498 L198 560 L112 552 L92 512 Z'/%3E%3Cpath d='M40 620 C 120 592, 178 642, 258 612 S 398 642, 478 602 S 618 632, 690 598' stroke-dasharray='6 4'/%3E%3Cpath d='M232 78 C 300 50, 380 66, 442 46' stroke-dasharray='2 4'/%3E%3Ccircle cx='232' cy='78' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='302' cy='158' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='462' cy='208' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='180' cy='450' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='638' cy='522' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 720px 720px;
 }
 
 .dark #root::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='560' viewBox='0 0 560 560'%3E%3Cg fill='none' stroke='%23e2e8f0' stroke-opacity='0.045' stroke-width='1.2'%3E%3Cpath d='M40 90 L150 30 L210 130 Z'/%3E%3Cpath d='M210 130 L150 30 L320 70 Z'/%3E%3Cpath d='M430 40 L510 120 L390 160 Z'/%3E%3Cpath d='M60 330 L20 240 L140 260 Z'/%3E%3Cpath d='M480 300 L540 390 L420 400 L400 310 Z'/%3E%3Cpath d='M240 430 L330 380 L360 480 L260 520 Z'/%3E%3Cpath d='M100 480 L60 410 L170 430 Z'/%3E%3Ccircle cx='320' cy='70' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='140' cy='260' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='420' cy='400' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='210' cy='130' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='720' viewBox='0 0 720 720'%3E%3Cg fill='none' stroke='%23e2e8f0' stroke-opacity='0.045' stroke-width='1.2' stroke-linejoin='round'%3E%3Cpath d='M80 120 L138 92 L198 112 L232 78 L290 102 L302 158 L262 198 L272 248 L212 270 L152 242 L102 262 L70 200 Z'/%3E%3Cpath d='M302 158 L362 128 L432 150 L462 208 L422 268 L352 260 L272 248 L262 198 Z'/%3E%3Cpath d='M462 208 L530 180 L588 220 L570 290 L494 302 L422 268 Z'/%3E%3Cpath d='M520 420 L578 382 L650 400 L678 462 L638 522 L558 540 L512 488 Z'/%3E%3Cpath d='M118 478 L180 450 L222 498 L198 560 L112 552 L92 512 Z'/%3E%3Cpath d='M40 620 C 120 592, 178 642, 258 612 S 398 642, 478 602 S 618 632, 690 598' stroke-dasharray='6 4'/%3E%3Cpath d='M232 78 C 300 50, 380 66, 442 46' stroke-dasharray='2 4'/%3E%3Ccircle cx='232' cy='78' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='302' cy='158' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='462' cy='208' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='180' cy='450' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='638' cy='522' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 /* Leaflet chrome in dark mode: controls, attribution and tooltips are styled

@@ -14,7 +14,7 @@ export function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
       aria-label={isDark ? 'Bytt til lyst tema' : 'Bytt til mørkt tema'}
       aria-pressed={isDark}
       title={isDark ? 'Lyst tema' : 'Mørkt tema'}
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:focus-visible:outline-slate-100"
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-sm border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 hover:text-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-teal-400 dark:focus-visible:outline-teal-400"
     >
       {isDark ? (
         // Sun

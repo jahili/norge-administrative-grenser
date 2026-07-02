@@ -1,73 +1,101 @@
-# React + TypeScript + Vite
+# Norge – administrative grenser
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+En web-app for å velge norske **fylker, kommuner og bydeler** på et kart og laste dem ned
+som GeoJSON eller TopoJSON — klare til bruk i Power BI, QGIS, Leaflet, D3 eller andre
+kart- og analyseverktøy.
 
-Currently, two official plugins are available:
+**Prøv appen:** <https://jahili.github.io/norge-administrative-grenser/>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Hva kan du gjøre?
 
-## React Compiler
+- Velge ett eller flere **fylker**, deretter **kommuner**, og for seks byer også **bydeler**
+  (Bergen, Fredrikstad, Kristiansand, Oslo, Stavanger og Trondheim)
+- Se utvalget på et kart før du laster ned
+- Velge om grensene skal **følge kystlinjen** eller strekke seg ut til
+  **territorialgrensen i havet** («havgrensen»)
+- Justere **detaljnivået** på geometrien — full detalj for analyse, forenklet for
+  raskere visualisering og mindre filer
+- Laste ned som **GeoJSON** eller **TopoJSON** i WGS84 (EPSG:4326)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Nedlastingsnivået følger valgene dine: velger du bare et fylke får du fylkesgrensen,
+velger du kommuner får du kommunene, og velger du bydeler får du bydelene.
 
-## Expanding the ESLint configuration
+Alt skjer i nettleseren — ingen data sendes til noen server.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Slik bruker du appen
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. **Velg fylker** — kryss av for de fylkene du er interessert i
+2. **Velg kommuner** — kommunene i valgte fylker dukker opp, med søkefelt for store fylker.
+   Kommuner med bydelsdata er merket med en liten prikk
+3. **Velg bydeler** (valgfritt) — vises bare når en valgt kommune har bydeler
+4. **Last ned** — velg format, juster filnavnet om du vil, og trykk på knappen
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Teknisk
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Stack
+
+- [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vite.dev/)
+- [Tailwind CSS v4](https://tailwindcss.com/) (mørk modus følger OS-innstillingen, med manuell overstyring)
+- [Leaflet](https://leafletjs.com/) / react-leaflet for kartvisning, med
+  [CARTO](https://carto.com/attributions) Positron/Dark Matter som bakgrunnskart
+- [topojson-client](https://github.com/topojson/topojson-client) og
+  [topojson-server](https://github.com/topojson/topojson-server) for konvertering i nettleseren
+- Selvhostet [Inter](https://rsms.me/inter/)-font (ingen eksterne font-kall)
+
+### Arkitektur
+
+Appen laster én ferdigbygd TopoJSON-fil (~2,8 MB) med fem lag som deler samme
+buesett (arcs):
+
+| Lag | Innhold |
+| --- | --- |
+| `fylker` | Fylkesgrenser med havgrense |
+| `fylkerUtenHavgrense` | Fylkesgrenser klippet etter kystlinjen |
+| `kommuner` | Kommunegrenser med havgrense |
+| `kommunerUtenHavgrense` | Kommunegrenser klippet etter kystlinjen |
+| `bydeler` | 68 bydeler/delområder i de seks byene |
+
+Topologien er forhåndsprosessert med `presimplify`, slik at detaljnivå-slideren kan
+forenkle geometrien direkte i nettleseren uten ny nedlasting. Ved nedlasting bygges en
+frisk TopoJSON (eller GeoJSON) av kun de valgte områdene.
+
+### Datapipeline
+
+Kildedataene bearbeides av skript i `data-pipeline/`:
+
+```bash
+npm run data:download    # 01: last ned kildedata
+npm run data:normalize   # 02: normaliser til felles skjema (fylker, kommuner, bydeler)
+npm run data:topology    # 03: bygg delt topologi med mapshaper + presimplify
+npm run data:copy        # 04: kopier resultatet inn i appen (src/assets/)
+npm run data:build       # alle fire stegene i rekkefølge
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Normaliseringen håndterer at bydel-kildene har ulike skjemaer (bl.a. syntetiske
+bydelsnumre for Fredrikstad og sammenslåing av Oslos to Marka-polygoner), og gir alle
+bydeler et felles skjema: `bydelnummer`, `bydelnavn`, `kommunenummer`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Kjøre lokalt
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev      # utviklingsserver
+npm run build    # produksjonsbygg til dist/
+npm run deploy   # publiser til GitHub Pages
 ```
+
+## Datakilder
+
+Grunnlagsdataene er samlet i [Kart-fylker-og-kommuner-json](https://github.com/jahili/Kart-fylker-og-kommuner-json)
+— se den for full kildeoversikt. Kort oppsummert:
+
+- **Fylkes- og kommunegrenser:** basert på GeoJSON utarbeidet av
+  [Robert Hopland](https://github.com/robhop), som igjen bygger på
+  [data fra Kartverket](https://kartkatalog.geonorge.no/)
+- **Bydeler i Fredrikstad:** [Kartverket](https://kartkatalog.geonorge.no/)
+- **Bydeler i Oslo:** Oslo kommune
+- **Bydeler/delområder i Bergen, Stavanger, Trondheim og Kristiansand:** [SSB](https://kart.ssb.no/)
+- Klipping og konvertering av kildedata er gjort i [Mapshaper](https://mapshaper.org/)
+
+Kartverkets data er tilgjengelig under åpen lisens (CC BY 4.0) — se
+[Geonorge](https://kartkatalog.geonorge.no/) for vilkår per datasett.

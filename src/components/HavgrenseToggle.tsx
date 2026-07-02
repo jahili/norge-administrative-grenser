@@ -12,7 +12,7 @@ interface HavgrenseToggleProps {
  */
 export function HavgrenseToggle({ medHavgrense, onChange }: HavgrenseToggleProps) {
   return (
-    <fieldset className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <fieldset className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <legend className="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">Kystlinje</legend>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Skal grensene følge kystlinjen, eller strekke seg videre ut til territorialgrensen i havet
@@ -23,7 +23,7 @@ export function HavgrenseToggle({ medHavgrense, onChange }: HavgrenseToggleProps
           <input
             type="radio"
             name="havgrense"
-            className="h-4 w-4 accent-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900 dark:accent-slate-300 dark:focus-visible:outline-slate-100"
+            className="h-4 w-4 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
             checked={!medHavgrense}
             onChange={() => onChange(false)}
           />
@@ -33,7 +33,7 @@ export function HavgrenseToggle({ medHavgrense, onChange }: HavgrenseToggleProps
           <input
             type="radio"
             name="havgrense"
-            className="h-4 w-4 accent-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900 dark:accent-slate-300 dark:focus-visible:outline-slate-100"
+            className="h-4 w-4 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
             checked={medHavgrense}
             onChange={() => onChange(true)}
           />

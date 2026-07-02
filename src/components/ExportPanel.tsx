@@ -57,7 +57,7 @@ export function ExportPanel({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Last ned</h2>
 
       <fieldset className="mt-3">
@@ -68,7 +68,7 @@ export function ExportPanel({
               <input
                 type="radio"
                 name="export-format"
-                className="h-4 w-4 accent-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900 dark:accent-slate-300 dark:focus-visible:outline-slate-100"
+                className="h-4 w-4 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
                 checked={format === value}
                 onChange={() => onFormatChange(value)}
               />
@@ -91,7 +91,7 @@ export function ExportPanel({
             placeholder={defaultFilenameStem ?? undefined}
             disabled={disabled}
             spellCheck={false}
-            className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 dark:focus-visible:outline-slate-100 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+            className="w-full rounded-xs border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 dark:focus-visible:outline-teal-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
           />
           <span className="shrink-0 text-sm text-slate-500 dark:text-slate-400">.{extension ?? '…'}</span>
         </div>
@@ -101,7 +101,7 @@ export function ExportPanel({
         type="button"
         onClick={handleDownload}
         disabled={disabled || !filename}
-        className="mt-4 inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white dark:focus-visible:outline-slate-100 dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
+        className="mt-4 inline-flex items-center justify-center gap-2 rounded-xs bg-teal-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-teal-400 dark:text-slate-900 dark:hover:bg-teal-300 dark:focus-visible:outline-teal-400 dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
       >
         {justDownloaded ? (
           <>

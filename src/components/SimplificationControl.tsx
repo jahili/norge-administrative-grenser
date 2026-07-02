@@ -16,7 +16,7 @@ export function SimplificationControl({ detailPercent, onChange, estimatedBytes 
   const sliderId = useId()
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <label htmlFor={sliderId} className="text-sm font-semibold text-slate-900 dark:text-slate-100">
         Detaljnivå på geometrien
       </label>
@@ -33,7 +33,7 @@ export function SimplificationControl({ detailPercent, onChange, estimatedBytes 
           step={1}
           value={detailPercent}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="h-2 w-full cursor-pointer accent-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:accent-slate-300 dark:focus-visible:outline-slate-100"
+          className="h-2 w-full cursor-pointer accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
           aria-describedby={`${sliderId}-value`}
         />
         <output

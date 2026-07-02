@@ -13,7 +13,7 @@ export function KommuneSelector({ fylker, kommunerByFylke, bydelsByKommune, sele
   const selectedFylker = fylker.filter((f) => selection.selectedFylker.has(f.fylkesnummer))
 
   return (
-    <fieldset className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <fieldset className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <legend className="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">2. Velg kommuner</legend>
 
       {selectedFylker.length === 0 ? (
@@ -60,12 +60,12 @@ function FylkeGroup({ fylke, kommuner, bydelsByKommune, selection }: FylkeGroupP
     <div
       role="group"
       aria-labelledby={headingId}
-      className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40"
+      className="rounded-sm border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40"
     >
       <label id={headingId} className="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-200">
         <input
           type="checkbox"
-          className="h-4 w-4 accent-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900 dark:accent-slate-300 dark:focus-visible:outline-slate-100"
+          className="h-4 w-4 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
           checked={allSelected}
           ref={(el) => {
             if (el) el.indeterminate = someSelected && !allSelected
@@ -86,7 +86,7 @@ function FylkeGroup({ fylke, kommuner, bydelsByKommune, selection }: FylkeGroupP
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Søk kommuner…"
-            className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 placeholder-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 dark:focus-visible:outline-slate-100"
+            className="w-full rounded-xs border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 placeholder-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 dark:focus-visible:outline-teal-400"
           />
         </div>
       )}
@@ -97,10 +97,10 @@ function FylkeGroup({ fylke, kommuner, bydelsByKommune, selection }: FylkeGroupP
         <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((kommune) => (
             <li key={kommune.kommunenummer}>
-              <label className="flex items-center gap-2 rounded-md px-1 py-0.5 text-sm text-slate-700 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800">
+              <label className="flex items-center gap-2 rounded-xs px-1 py-0.5 text-sm text-slate-700 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 shrink-0 accent-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-slate-900 dark:accent-slate-300 dark:focus-visible:outline-slate-100"
+                  className="h-4 w-4 shrink-0 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
                   checked={selection.selectedKommuner.has(kommune.kommunenummer)}
                   onChange={() => selection.toggleKommune(kommune.kommunenummer)}
                 />
@@ -109,7 +109,7 @@ function FylkeGroup({ fylke, kommuner, bydelsByKommune, selection }: FylkeGroupP
                   {bydelsByKommune.has(kommune.kommunenummer) && (
                     <span
                       title="Har bydeler"
-                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400 dark:bg-slate-500"
+                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600 dark:bg-teal-400"
                       aria-label="Har bydeler"
                     />
                   )}
