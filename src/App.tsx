@@ -223,6 +223,7 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
             contextFylker={contextFylker}
             detailPercent={detailPercent}
             havgrenseKey={medHavgrense ? 'med' : 'uten'}
+            previewGranularity={effectiveGranularity}
           />
           <p className="mt-2 text-sm text-slate-500">{previewLabel}</p>
         </section>
@@ -243,6 +244,8 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
           disabled={!exportResult}
           defaultFilenameStem={filenameStem}
           extension={exportResult?.extension ?? null}
+          granularity={effectiveGranularity}
+          featureCount={exportTarget.features.features.length}
         />
       </div>
     </div>

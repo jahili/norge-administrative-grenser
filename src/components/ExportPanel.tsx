@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react'
-import type { ExportFormat } from '../lib/types'
+import type { ExportFormat, ExportGranularity } from '../lib/types'
 
 interface ExportPanelProps {
   format: ExportFormat
@@ -8,6 +8,19 @@ interface ExportPanelProps {
   disabled: boolean
   defaultFilenameStem: string | null
   extension: string | null
+  granularity: ExportGranularity
+  featureCount: number
+}
+
+const LEVEL_SINGULAR: Record<ExportGranularity, string> = {
+  fylker: 'fylke',
+  kommuner: 'kommune',
+  bydeler: 'bydel',
+}
+const LEVEL_PLURAL: Record<ExportGranularity, string> = {
+  fylker: 'fylker',
+  kommuner: 'kommuner',
+  bydeler: 'bydeler',
 }
 
 export function ExportPanel({
@@ -17,6 +30,8 @@ export function ExportPanel({
   disabled,
   defaultFilenameStem,
   extension,
+  granularity,
+  featureCount,
 }: ExportPanelProps) {
   const [stem, setStem] = useState(defaultFilenameStem ?? '')
   const [justDownloaded, setJustDownloaded] = useState(false)
@@ -25,6 +40,13 @@ export function ExportPanel({
 
   const effectiveStem = stem.trim() || defaultFilenameStem
   const filename = effectiveStem && extension ? `${effectiveStem}.${extension}` : null
+
+  const levelWord = featureCount === 1 ? LEVEL_SINGULAR[granularity] : LEVEL_PLURAL[granularity]
+  const formatLabel = format === 'geojson' ? 'GeoJSON' : 'TopoJSON'
+  const buttonLabel =
+    disabled || featureCount === 0
+      ? `Last ned ${formatLabel}`
+      : `Last ned ${featureCount} ${levelWord} (${formatLabel})`
 
   function handleDownload() {
     if (!filename) return
@@ -93,7 +115,7 @@ export function ExportPanel({
             <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M8 2v8M4 7l4 4 4-4M2 13h12" />
             </svg>
-            Last ned {format === 'geojson' ? 'GeoJSON' : 'TopoJSON'}
+            {buttonLabel}
           </>
         )}
       </button>

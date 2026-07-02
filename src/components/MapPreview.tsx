@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet'
 import type { Map as LeafletMap } from 'leaflet'
 import type { Feature, FeatureCollection, Position } from 'geojson'
 import type { AreaGeometry, BydelProperties, FylkeProperties, KommuneProperties } from '../lib/types'
+import type { ExportGranularity } from '../lib/types'
 
 type SelectedProperties = KommuneProperties | BydelProperties
 
@@ -18,12 +19,18 @@ interface MapPreviewProps {
   contextFylker: FeatureCollection<AreaGeometry, FylkeProperties>
   detailPercent: number
   havgrenseKey: string
+  /** Controls how contextFylker is rendered: filled blue when 'fylker' (the export target),
+   *  dashed gray outline when drilling into kommuner/bydeler. */
+  previewGranularity: ExportGranularity
 }
 
 const NORWAY_CENTER: [number, number] = [64.5, 13]
 const NORWAY_ZOOM = 4
 
-export function MapPreview({ selectedFeatures, contextFylker, detailPercent, havgrenseKey }: MapPreviewProps) {
+const SELECTED_STYLE = { color: '#1d4ed8', weight: 1.5, fillColor: '#3b82f6', fillOpacity: 0.45 }
+const CONTEXT_STYLE = { color: '#94a3b8', weight: 1, fill: false, dashArray: '4 3' } as const
+
+export function MapPreview({ selectedFeatures, contextFylker, detailPercent, havgrenseKey, previewGranularity }: MapPreviewProps) {
   const mapRef = useRef<LeafletMap | null>(null)
 
   const selectionKey = useMemo(
@@ -35,8 +42,6 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
     const map = mapRef.current
     if (!map) return
 
-    // Prefer zooming to the selected features (kommuner/bydeler); fall back to
-    // the fylke outlines so selecting a fylke without any kommuner still zooms.
     const zoomTarget =
       selectedFeatures.features.length > 0 ? selectedFeatures : contextFylker
 
@@ -48,6 +53,8 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
     const bounds = featureCollectionBounds(zoomTarget)
     if (bounds) map.fitBounds(bounds, { padding: [24, 24] })
   }, [selectedFeatures, contextFylker])
+
+  const fylkerKey = `fylker-${contextFylker.features.length}-${detailPercent}-${havgrenseKey}-${previewGranularity}`
 
   return (
     <div>
@@ -63,17 +70,32 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsytere'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <GeoJSON
-          key={`fylker-${contextFylker.features.length}-${detailPercent}-${havgrenseKey}`}
-          data={contextFylker}
-          style={() => ({ color: '#94a3b8', weight: 1, fill: false, dashArray: '4 3' })}
-          interactive={false}
-        />
+
+        {/* Fylke layer: filled blue when fylker is the export target, dashed outline otherwise */}
+        {previewGranularity === 'fylker' ? (
+          <GeoJSON
+            key={fylkerKey}
+            data={contextFylker}
+            style={() => SELECTED_STYLE}
+            onEachFeature={(feature: Feature<AreaGeometry, FylkeProperties>, layer) => {
+              layer.bindTooltip(feature.properties.fylkesnavn, { sticky: true })
+            }}
+          />
+        ) : (
+          <GeoJSON
+            key={fylkerKey}
+            data={contextFylker}
+            style={() => CONTEXT_STYLE}
+            interactive={false}
+          />
+        )}
+
+        {/* Kommune / bydel selection layer */}
         {selectedFeatures.features.length > 0 && (
           <GeoJSON
             key={`selection-${selectionKey}-${detailPercent}-${havgrenseKey}`}
             data={selectedFeatures}
-            style={() => ({ color: '#1d4ed8', weight: 1.5, fillColor: '#3b82f6', fillOpacity: 0.45 })}
+            style={() => SELECTED_STYLE}
             onEachFeature={(feature: Feature<AreaGeometry, SelectedProperties>, layer) => {
               layer.bindTooltip(featureLabel(feature.properties), { sticky: true })
             }}
@@ -82,11 +104,13 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
       </MapContainer>
 
       <p className="sr-only" aria-live="polite">
-        {selectedFeatures.features.length === 0
-          ? 'Ingen kommuner er valgt ennå. Kartet viser hele Norge.'
-          : `Kartet viser ${selectedFeatures.features.length} valgte områder: ${selectedFeatures.features
-              .map((f) => featureLabel(f.properties))
-              .join(', ')}.`}
+        {selectedFeatures.features.length === 0 && contextFylker.features.length === 0
+          ? 'Ingen områder er valgt ennå. Kartet viser hele Norge.'
+          : `Kartet viser ${
+              previewGranularity === 'fylker'
+                ? contextFylker.features.map((f) => f.properties.fylkesnavn).join(', ')
+                : selectedFeatures.features.map((f) => featureLabel(f.properties)).join(', ')
+            }.`}
       </p>
     </div>
   )
