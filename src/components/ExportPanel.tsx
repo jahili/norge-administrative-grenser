@@ -1,13 +1,9 @@
 import { useId, useRef, useState } from 'react'
-import type { ExportFormat, ExportGranularity } from '../lib/types'
+import type { ExportFormat } from '../lib/types'
 
 interface ExportPanelProps {
   format: ExportFormat
   onFormatChange: (format: ExportFormat) => void
-  granularity: ExportGranularity
-  onGranularityChange: (granularity: ExportGranularity) => void
-  showGranularityChoice: boolean
-  showBydelChoice: boolean
   onDownload: (filename: string) => void
   disabled: boolean
   defaultFilenameStem: string | null
@@ -17,10 +13,6 @@ interface ExportPanelProps {
 export function ExportPanel({
   format,
   onFormatChange,
-  granularity,
-  onGranularityChange,
-  showGranularityChoice,
-  showBydelChoice,
   onDownload,
   disabled,
   defaultFilenameStem,
@@ -34,18 +26,6 @@ export function ExportPanel({
   const effectiveStem = stem.trim() || defaultFilenameStem
   const filename = effectiveStem && extension ? `${effectiveStem}.${extension}` : null
 
-  type GranularityOption = { value: ExportGranularity; label: string }
-  const granularityOptions: GranularityOption[] = []
-  if (showGranularityChoice || showBydelChoice) {
-    granularityOptions.push({ value: 'kommuner', label: 'Kommunegrenser' })
-  }
-  if (showGranularityChoice) {
-    granularityOptions.push({ value: 'fylker', label: 'Fylkesgrenser' })
-  }
-  if (showBydelChoice) {
-    granularityOptions.push({ value: 'bydeler', label: 'Bydeler' })
-  }
-
   function handleDownload() {
     if (!filename) return
     onDownload(filename)
@@ -57,31 +37,6 @@ export function ExportPanel({
   return (
     <div className="rounded-lg border border-slate-200 p-4">
       <h2 className="text-sm font-semibold text-slate-900">Last ned</h2>
-
-      {granularityOptions.length > 0 && (
-        <fieldset className="mt-3">
-          <legend className="text-sm text-slate-600">Inndeling</legend>
-          <div className="mt-1 flex flex-wrap gap-4">
-            {granularityOptions.map(({ value, label }) => (
-              <label key={value} className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="radio"
-                  name="export-granularity"
-                  className="h-4 w-4 border-slate-300 text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-500"
-                  checked={granularity === value}
-                  onChange={() => onGranularityChange(value)}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-          <p className="mt-1.5 text-xs text-slate-500">
-            {granularity === 'fylker' && 'Eksporterer hele fylket som ett polygon, uten inndeling i kommuner.'}
-            {granularity === 'kommuner' && 'Eksporterer de valgte kommunene som separate polygoner.'}
-            {granularity === 'bydeler' && 'Eksporterer de valgte bydelene som separate polygoner.'}
-          </p>
-        </fieldset>
-      )}
 
       <fieldset className="mt-3">
         <legend className="text-sm text-slate-600">Filformat</legend>

@@ -96,7 +96,6 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
   const selection = useSelection(fylker, kommunerByFylke, bydelsByKommune)
   const [detailPercent, setDetailPercent] = useState(100)
   const [format, setFormat] = useState<ExportFormat>('geojson')
-  const [granularity, setGranularity] = useState<ExportGranularity>('kommuner')
   const [medHavgrense, setMedHavgrense] = useState(false)
 
   const simplifiedTopology = useSimplifiedTopology(topology, detailPercent)
@@ -133,12 +132,12 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
     [kommuner, selection.selectedKommuner, bydelsByKommune],
   )
 
-  const hasBydelChoice = kommunerMedBydeler.length > 0
-  const showGranularityChoice = selection.selectedFylker.size > 0
-
+  // Granularity follows the deepest selection level the user has made —
+  // no separate radio button needed.
   const effectiveGranularity: ExportGranularity = (() => {
-    if (showGranularityChoice && granularity === 'fylker') return 'fylker'
-    if (hasBydelChoice && granularity === 'bydeler') return 'bydeler'
+    if (selection.selectedBydeler.size > 0) return 'bydeler'
+    if (selection.selectedKommuner.size > 0) return 'kommuner'
+    if (selection.selectedFylker.size > 0) return 'fylker'
     return 'kommuner'
   })()
 
@@ -175,16 +174,22 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
     return selectionFilenameStem(exportTarget.features.features.map((f) => f.properties), fylker, kommunerByFylke)
   }, [exportTarget, fylker, kommuner, kommunerByFylke, bydelsByKommune])
 
+  // Map shows selected bydeler or kommuner with blue fill; fylker are always
+  // shown as dashed outlines via contextFylker regardless of granularity.
   const previewFeatures = effectiveGranularity === 'bydeler' ? selectedBydelFeatures : selectedFeatures
-  const previewCount = previewFeatures.features.length
-  const previewLabel =
-    effectiveGranularity === 'bydeler'
-      ? previewCount === 0
-        ? 'Ingen bydeler valgt ennå.'
-        : `${previewCount} bydel${previewCount === 1 ? '' : 'er'} valgt.`
-      : previewCount === 0
-        ? 'Ingen kommuner valgt ennå.'
-        : `${previewCount} kommune${previewCount === 1 ? '' : 'r'} valgt.`
+
+  const previewLabel = (() => {
+    if (effectiveGranularity === 'fylker') {
+      const n = selection.selectedFylker.size
+      return `${n} fylke${n === 1 ? '' : 'r'} valgt.`
+    }
+    if (effectiveGranularity === 'bydeler') {
+      const n = selectedBydelFeatures.features.length
+      return n === 0 ? 'Ingen bydeler valgt ennå.' : `${n} bydel${n === 1 ? '' : 'er'} valgt.`
+    }
+    const n = selectedFeatures.features.length
+    return n === 0 ? 'Ingen kommuner valgt ennå.' : `${n} kommune${n === 1 ? '' : 'r'} valgt.`
+  })()
 
   function handleDownload(filename: string) {
     if (!exportResult) return
@@ -234,10 +239,6 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
           key={filenameStem ?? 'no-selection'}
           format={format}
           onFormatChange={setFormat}
-          granularity={effectiveGranularity}
-          onGranularityChange={setGranularity}
-          showGranularityChoice={showGranularityChoice}
-          showBydelChoice={hasBydelChoice}
           onDownload={handleDownload}
           disabled={!exportResult}
           defaultFilenameStem={filenameStem}
