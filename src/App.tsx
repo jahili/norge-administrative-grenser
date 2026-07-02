@@ -41,33 +41,15 @@ function App() {
   return (
     <div className="mx-auto max-w-6xl p-6">
       <header className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          {/* Logo mark: abstract "N" drawn as a single polygon stroke */}
-          <svg
-            className="mt-1 h-9 w-9 shrink-0"
-            viewBox="0 0 32 32"
-            aria-hidden="true"
-          >
-            <rect width="32" height="32" rx="3" className="fill-slate-900 dark:fill-slate-100" />
-            <path
-              d="M9 23V9l14 14V9"
-              fill="none"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="stroke-teal-400 dark:stroke-teal-700"
-            />
-          </svg>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-              Norge – administrative grenser
-            </h1>
-            <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
-              Velg fylker og kommuner, forhåndsvis utvalget på kartet, og last det ned som GeoJSON
-              eller TopoJSON i WGS84 (EPSG:4326). Alt skjer i nettleseren — ingen data sendes til en
-              server.
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+            Norge – administrative grenser
+          </h1>
+          <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
+            Velg fylker og kommuner, forhåndsvis utvalget på kartet, og last det ned som GeoJSON
+            eller TopoJSON i WGS84 (EPSG:4326). Alt skjer i nettleseren — ingen data sendes til en
+            server.
+          </p>
         </div>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
