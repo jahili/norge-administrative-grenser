@@ -1,16 +1,83 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: `dark:` utilities apply when <html> has .dark,
+   which useTheme/index.html manage (system preference + manual override). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter Variable', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
 html {
   color-scheme: light;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
+  background-color: #ffffff;
+}
+
+.dark body {
+  background-color: #0a0f1a;
 }
 
 #root {
   min-height: 100svh;
+  position: relative;
+}
+
+/* Decorative low-poly backdrop: sparse polygon outlines echoing map geometry.
+   Kept to ~3% contrast so text and controls are unaffected (WCAG non-text
+   contrast rules only apply to meaningful graphics). */
+#root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='560' viewBox='0 0 560 560'%3E%3Cg fill='none' stroke='%230f172a' stroke-opacity='0.05' stroke-width='1.2'%3E%3Cpath d='M40 90 L150 30 L210 130 Z'/%3E%3Cpath d='M210 130 L150 30 L320 70 Z'/%3E%3Cpath d='M430 40 L510 120 L390 160 Z'/%3E%3Cpath d='M60 330 L20 240 L140 260 Z'/%3E%3Cpath d='M480 300 L540 390 L420 400 L400 310 Z'/%3E%3Cpath d='M240 430 L330 380 L360 480 L260 520 Z'/%3E%3Cpath d='M100 480 L60 410 L170 430 Z'/%3E%3Ccircle cx='320' cy='70' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='140' cy='260' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='420' cy='400' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3Ccircle cx='210' cy='130' r='2.5' fill='%230f172a' fill-opacity='0.07' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 560px 560px;
+}
+
+.dark #root::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='560' viewBox='0 0 560 560'%3E%3Cg fill='none' stroke='%23e2e8f0' stroke-opacity='0.045' stroke-width='1.2'%3E%3Cpath d='M40 90 L150 30 L210 130 Z'/%3E%3Cpath d='M210 130 L150 30 L320 70 Z'/%3E%3Cpath d='M430 40 L510 120 L390 160 Z'/%3E%3Cpath d='M60 330 L20 240 L140 260 Z'/%3E%3Cpath d='M480 300 L540 390 L420 400 L400 310 Z'/%3E%3Cpath d='M240 430 L330 380 L360 480 L260 520 Z'/%3E%3Cpath d='M100 480 L60 410 L170 430 Z'/%3E%3Ccircle cx='320' cy='70' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='140' cy='260' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='420' cy='400' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3Ccircle cx='210' cy='130' r='2.5' fill='%23e2e8f0' fill-opacity='0.06' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Leaflet chrome in dark mode: controls, attribution and tooltips are styled
+   by leaflet.css with hardcoded light colors. */
+.dark .leaflet-control-zoom a {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+.dark .leaflet-control-zoom a:hover {
+  background-color: #334155;
+}
+.dark .leaflet-bar {
+  border-color: #334155;
+}
+.dark .leaflet-control-attribution {
+  background-color: rgba(15, 23, 42, 0.8);
+  color: #94a3b8;
+}
+.dark .leaflet-control-attribution a {
+  color: #cbd5e1;
+}
+.dark .leaflet-tooltip {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+.dark .leaflet-tooltip-top::before {
+  border-top-color: #334155;
+}
+.dark .leaflet-container {
+  background-color: #0a0f1a;
 }
 
 /* Visually hide content but keep it available to screen readers */

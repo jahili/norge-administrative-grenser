@@ -16,11 +16,11 @@ export function SimplificationControl({ detailPercent, onChange, estimatedBytes 
   const sliderId = useId()
 
   return (
-    <div className="rounded-lg border border-slate-200 p-4">
-      <label htmlFor={sliderId} className="text-sm font-semibold text-slate-900">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <label htmlFor={sliderId} className="text-sm font-semibold text-slate-900 dark:text-slate-100">
         Detaljnivå på geometrien
       </label>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
         Lavere detaljnivå gir enklere geometri og mindre fil — fint hvis du bare trenger
         omtrentlige grenser til visualisering.
       </p>
@@ -33,16 +33,20 @@ export function SimplificationControl({ detailPercent, onChange, estimatedBytes 
           step={1}
           value={detailPercent}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="h-2 w-full cursor-pointer accent-blue-600"
+          className="h-2 w-full cursor-pointer accent-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 dark:accent-slate-300 dark:focus-visible:outline-slate-100"
           aria-describedby={`${sliderId}-value`}
         />
-        <output id={`${sliderId}-value`} htmlFor={sliderId} className="w-14 text-right text-sm tabular-nums text-slate-700">
+        <output
+          id={`${sliderId}-value`}
+          htmlFor={sliderId}
+          className="w-14 text-right text-sm tabular-nums text-slate-700 dark:text-slate-300"
+        >
           {detailPercent}%
         </output>
       </div>
-      <p className="mt-2 text-sm text-slate-600">
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
         Estimert filstørrelse for valgt utvalg:{' '}
-        <span className="font-medium text-slate-900">
+        <span className="font-medium text-slate-900 dark:text-slate-100">
           {estimatedBytes === null ? 'velg minst én kommune' : formatBytes(estimatedBytes)}
         </span>
       </p>

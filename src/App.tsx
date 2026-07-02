@@ -4,6 +4,7 @@ import { useTopology } from './hooks/useTopology'
 import type { NorwayTopologyType } from './hooks/useTopology'
 import { useSelection } from './hooks/useSelection'
 import { useSimplifiedTopology } from './hooks/useSimplifiedTopology'
+import { useTheme } from './hooks/useTheme'
 import { FylkeSelector } from './components/FylkeSelector'
 import { KommuneSelector } from './components/KommuneSelector'
 import { BydelSelector } from './components/BydelSelector'
@@ -11,6 +12,7 @@ import { HavgrenseToggle } from './components/HavgrenseToggle'
 import { MapPreview } from './components/MapPreview'
 import { SimplificationControl } from './components/SimplificationControl'
 import { ExportPanel } from './components/ExportPanel'
+import { ThemeToggle } from './components/ThemeToggle'
 import {
   selectedFeatureCollection,
   selectedBydelFeatureCollection,
@@ -34,41 +36,65 @@ import type { FeatureCollection } from 'geojson'
 
 function App() {
   const topologyState = useTopology()
+  const { theme, toggleTheme } = useTheme()
 
   return (
     <div className="mx-auto max-w-6xl p-6">
-      <header>
-        <h1 className="text-3xl font-semibold text-slate-900">Norge – administrative grenser</h1>
-        <p className="mt-2 max-w-2xl text-slate-600">
-          Velg fylker og kommuner, forhåndsvis utvalget på kartet, og last det ned som GeoJSON
-          eller TopoJSON i WGS84 (EPSG:4326). Alt skjer i nettleseren — ingen data sendes til en
-          server.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          {/* Logo mark: abstract "N" drawn as a single polygon stroke */}
+          <svg
+            className="mt-1 h-9 w-9 shrink-0"
+            viewBox="0 0 32 32"
+            aria-hidden="true"
+          >
+            <rect width="32" height="32" rx="7" className="fill-slate-900 dark:fill-slate-100" />
+            <path
+              d="M9 23V9l14 14V9"
+              fill="none"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="stroke-white dark:stroke-slate-900"
+            />
+          </svg>
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+              Norge – administrative grenser
+            </h1>
+            <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
+              Velg fylker og kommuner, forhåndsvis utvalget på kartet, og last det ned som GeoJSON
+              eller TopoJSON i WGS84 (EPSG:4326). Alt skjer i nettleseren — ingen data sendes til en
+              server.
+            </p>
+          </div>
+        </div>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </header>
 
-      <main className="mt-6">
+      <main className="mt-8">
         {topologyState.status === 'loading' && (
           <div className="flex items-center gap-3 py-10">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-            <p role="status" className="text-slate-600">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900 dark:border-slate-700 dark:border-t-slate-100" />
+            <p role="status" className="text-slate-600 dark:text-slate-400">
               Laster inn kartdata (2,8 MB) …
             </p>
           </div>
         )}
         {topologyState.status === 'error' && (
-          <p role="alert" className="text-red-700">
+          <p role="alert" className="text-red-700 dark:text-red-400">
             Klarte ikke å laste kartdata: {topologyState.error.message}
           </p>
         )}
-        {topologyState.status === 'ready' && <Workspace {...topologyState} />}
+        {topologyState.status === 'ready' && <Workspace {...topologyState} theme={theme} />}
       </main>
 
-      <footer className="mt-10 border-t border-slate-100 pt-6 text-xs text-slate-400">
+      <footer className="mt-12 border-t border-slate-100 pt-6 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
         <p>
           Grensedata fra{' '}
           <a
             href="https://kartverket.no"
-            className="underline hover:text-slate-600"
+            className="underline hover:text-slate-600 dark:hover:text-slate-300"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -76,7 +102,7 @@ function App() {
           </a>
           . Bydelsdata tilgjengelig for Bergen, Fredrikstad, Kristiansand, Oslo, Stavanger og
           Trondheim — kommuner med bydeler er merket med{' '}
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 align-middle" /> i
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400 align-middle dark:bg-slate-500" /> i
           kommunelisten.
         </p>
       </footer>
@@ -90,9 +116,10 @@ interface WorkspaceProps {
   kommuner: KommuneProperties[]
   kommunerByFylke: Map<string, KommuneProperties[]>
   bydelsByKommune: Map<string, BydelProperties[]>
+  theme: 'light' | 'dark'
 }
 
-function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommune }: WorkspaceProps) {
+function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommune, theme }: WorkspaceProps) {
   const selection = useSelection(fylker, kommunerByFylke, bydelsByKommune)
   const [detailPercent, setDetailPercent] = useState(100)
   const [format, setFormat] = useState<ExportFormat>('geojson')
@@ -174,8 +201,8 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
     return selectionFilenameStem(exportTarget.features.features.map((f) => f.properties), fylker, kommunerByFylke)
   }, [exportTarget, fylker, kommuner, kommunerByFylke, bydelsByKommune])
 
-  // Map shows selected bydeler or kommuner with blue fill; fylker are always
-  // shown as dashed outlines via contextFylker regardless of granularity.
+  // Map shows selected bydeler or kommuner with fill; fylker are always
+  // shown as outlines via contextFylker regardless of granularity.
   const previewFeatures = effectiveGranularity === 'bydeler' ? selectedBydelFeatures : selectedFeatures
 
   const previewLabel = (() => {
@@ -217,15 +244,16 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
       {/* Right column: preview + output settings */}
       <div className="flex flex-col gap-6">
         <section aria-label="Kartforhåndsvisning">
-          <h2 className="mb-2 text-sm font-semibold text-slate-900">Forhåndsvisning</h2>
+          <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Forhåndsvisning</h2>
           <MapPreview
             selectedFeatures={previewFeatures}
             contextFylker={contextFylker}
             detailPercent={detailPercent}
             havgrenseKey={medHavgrense ? 'med' : 'uten'}
             previewGranularity={effectiveGranularity}
+            theme={theme}
           />
-          <p className="mt-2 text-sm text-slate-500">{previewLabel}</p>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{previewLabel}</p>
         </section>
 
         <HavgrenseToggle medHavgrense={medHavgrense} onChange={setMedHavgrense} />

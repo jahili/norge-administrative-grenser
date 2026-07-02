@@ -4,6 +4,7 @@ import type { Map as LeafletMap } from 'leaflet'
 import type { Feature, FeatureCollection, Position } from 'geojson'
 import type { AreaGeometry, BydelProperties, FylkeProperties, KommuneProperties } from '../lib/types'
 import type { ExportGranularity } from '../lib/types'
+import type { Theme } from '../hooks/useTheme'
 
 type SelectedProperties = KommuneProperties | BydelProperties
 
@@ -19,18 +20,40 @@ interface MapPreviewProps {
   contextFylker: FeatureCollection<AreaGeometry, FylkeProperties>
   detailPercent: number
   havgrenseKey: string
-  /** Controls how contextFylker is rendered: filled blue when 'fylker' (the export target),
-   *  dashed gray outline when drilling into kommuner/bydeler. */
+  /** Controls how contextFylker is rendered: filled when 'fylker' (the export target),
+   *  dashed outline when drilling into kommuner/bydeler. */
   previewGranularity: ExportGranularity
+  theme: Theme
 }
 
 const NORWAY_CENTER: [number, number] = [64.5, 13]
 const NORWAY_ZOOM = 4
 
-const SELECTED_STYLE = { color: '#1d4ed8', weight: 1.5, fillColor: '#3b82f6', fillOpacity: 0.45 }
-const CONTEXT_STYLE = { color: '#94a3b8', weight: 1, fill: false, dashArray: '4 3' } as const
+// Monochrome basemaps that match the app's grayscale design; the default OSM
+// tiles are far too colorful next to it.
+const TILES = {
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+} as const
 
-export function MapPreview({ selectedFeatures, contextFylker, detailPercent, havgrenseKey, previewGranularity }: MapPreviewProps) {
+const SELECTED_STYLE = {
+  light: { color: '#0f172a', weight: 1.5, fillColor: '#334155', fillOpacity: 0.4 },
+  dark: { color: '#f1f5f9', weight: 1.5, fillColor: '#cbd5e1', fillOpacity: 0.35 },
+} as const
+
+const CONTEXT_STYLE = {
+  light: { color: '#64748b', weight: 1, fill: false, dashArray: '4 3' },
+  dark: { color: '#94a3b8', weight: 1, fill: false, dashArray: '4 3' },
+} as const
+
+export function MapPreview({
+  selectedFeatures,
+  contextFylker,
+  detailPercent,
+  havgrenseKey,
+  previewGranularity,
+  theme,
+}: MapPreviewProps) {
   const mapRef = useRef<LeafletMap | null>(null)
 
   const selectionKey = useMemo(
@@ -54,7 +77,7 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
     if (bounds) map.fitBounds(bounds, { padding: [24, 24] })
   }, [selectedFeatures, contextFylker])
 
-  const fylkerKey = `fylker-${contextFylker.features.length}-${detailPercent}-${havgrenseKey}-${previewGranularity}`
+  const fylkerKey = `fylker-${contextFylker.features.length}-${detailPercent}-${havgrenseKey}-${previewGranularity}-${theme}`
 
   return (
     <div>
@@ -62,21 +85,22 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
         center={NORWAY_CENTER}
         zoom={NORWAY_ZOOM}
         scrollWheelZoom
-        className="h-[420px] w-full rounded-lg border border-slate-200"
+        className="h-[420px] w-full rounded-xl border border-slate-200 dark:border-slate-800"
         ref={mapRef}
         aria-label="Forhåndsvisning av valgte områder på kart"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsytere'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          key={`tiles-${theme}`}
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsytere &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url={TILES[theme]}
         />
 
-        {/* Fylke layer: filled blue when fylker is the export target, dashed outline otherwise */}
+        {/* Fylke layer: filled when fylker is the export target, dashed outline otherwise */}
         {previewGranularity === 'fylker' ? (
           <GeoJSON
             key={fylkerKey}
             data={contextFylker}
-            style={() => SELECTED_STYLE}
+            style={() => SELECTED_STYLE[theme]}
             onEachFeature={(feature: Feature<AreaGeometry, FylkeProperties>, layer) => {
               layer.bindTooltip(feature.properties.fylkesnavn, { sticky: true })
             }}
@@ -85,7 +109,7 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
           <GeoJSON
             key={fylkerKey}
             data={contextFylker}
-            style={() => CONTEXT_STYLE}
+            style={() => CONTEXT_STYLE[theme]}
             interactive={false}
           />
         )}
@@ -93,9 +117,9 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
         {/* Kommune / bydel selection layer */}
         {selectedFeatures.features.length > 0 && (
           <GeoJSON
-            key={`selection-${selectionKey}-${detailPercent}-${havgrenseKey}`}
+            key={`selection-${selectionKey}-${detailPercent}-${havgrenseKey}-${theme}`}
             data={selectedFeatures}
-            style={() => SELECTED_STYLE}
+            style={() => SELECTED_STYLE[theme]}
             onEachFeature={(feature: Feature<AreaGeometry, SelectedProperties>, layer) => {
               layer.bindTooltip(featureLabel(feature.properties), { sticky: true })
             }}
