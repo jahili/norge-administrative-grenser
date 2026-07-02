@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import topologyUrl from '../assets/norge-grenser.topojson?url'
-import type { FylkeProperties, KommuneProperties } from '../lib/types'
+import type { BydelProperties, FylkeProperties, KommuneProperties } from '../lib/types'
 
 export type NorwayTopologyType = Topology<{
   fylker: GeometryCollection<FylkeProperties>
   kommuner: GeometryCollection<KommuneProperties>
   fylkerUtenHavgrense: GeometryCollection<FylkeProperties>
   kommunerUtenHavgrense: GeometryCollection<KommuneProperties>
+  bydeler: GeometryCollection<BydelProperties>
 }>
 
 export interface NorwayTopology {
@@ -15,6 +16,10 @@ export interface NorwayTopology {
   fylker: FylkeProperties[]
   kommuner: KommuneProperties[]
   kommunerByFylke: Map<string, KommuneProperties[]>
+  bydeler: BydelProperties[]
+  /** All bydeler indexed by kommunenummer — only populated for the 6 kommuner
+   *  that have bydeler in the dataset. */
+  bydelsByKommune: Map<string, BydelProperties[]>
 }
 
 export type TopologyState =
@@ -41,6 +46,7 @@ export function useTopology(): TopologyState {
         // our bundled, pipeline-controlled dataset always carries one.
         const fylker = topology.objects.fylker.geometries.map((g) => g.properties as FylkeProperties)
         const kommuner = topology.objects.kommuner.geometries.map((g) => g.properties as KommuneProperties)
+        const bydeler = topology.objects.bydeler.geometries.map((g) => g.properties as BydelProperties)
 
         const kommunerByFylke = new Map<string, KommuneProperties[]>()
         for (const kommune of kommuner) {
@@ -49,7 +55,14 @@ export function useTopology(): TopologyState {
           else kommunerByFylke.set(kommune.fylkesnummer, [kommune])
         }
 
-        setState({ status: 'ready', topology, fylker, kommuner, kommunerByFylke })
+        const bydelsByKommune = new Map<string, BydelProperties[]>()
+        for (const bydel of bydeler) {
+          const list = bydelsByKommune.get(bydel.kommunenummer)
+          if (list) list.push(bydel)
+          else bydelsByKommune.set(bydel.kommunenummer, [bydel])
+        }
+
+        setState({ status: 'ready', topology, fylker, kommuner, kommunerByFylke, bydeler, bydelsByKommune })
       })
       .catch((error: unknown) => {
         if (!cancelled) {

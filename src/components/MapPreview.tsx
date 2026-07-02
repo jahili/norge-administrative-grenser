@@ -2,10 +2,21 @@ import { useEffect, useMemo, useRef } from 'react'
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet'
 import type { Map as LeafletMap } from 'leaflet'
 import type { Feature, FeatureCollection, Position } from 'geojson'
-import type { AreaGeometry, FylkeProperties, KommuneProperties } from '../lib/types'
+import type { AreaGeometry, BydelProperties, FylkeProperties, KommuneProperties } from '../lib/types'
+
+type SelectedProperties = KommuneProperties | BydelProperties
+
+/** Returns a stable string key and tooltip label for a selected feature, regardless
+ *  of whether it is a kommune or a bydel. */
+function featureId(props: SelectedProperties): string {
+  return 'kommunenummer' in props && 'fylkesnummer' in props ? props.kommunenummer : (props as BydelProperties).bydelnummer
+}
+function featureLabel(props: SelectedProperties): string {
+  return 'kommunenavn' in props ? props.kommunenavn : (props as BydelProperties).bydelnavn
+}
 
 interface MapPreviewProps {
-  selectedFeatures: FeatureCollection<AreaGeometry, KommuneProperties>
+  selectedFeatures: FeatureCollection<AreaGeometry, SelectedProperties>
   contextFylker: FeatureCollection<AreaGeometry, FylkeProperties>
   detailPercent: number
   /** Identifies which geometry variant is in play ("med"/"uten" havgrense), so the layer remounts when it changes. */
@@ -26,7 +37,7 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
   // geometry (not just which features are included) must be part of the key,
   // or the preview would keep showing stale shapes.
   const selectionKey = useMemo(
-    () => selectedFeatures.features.map((f) => f.properties.kommunenummer).join(','),
+    () => selectedFeatures.features.map((f) => featureId(f.properties)).join(','),
     [selectedFeatures],
   )
 
@@ -65,11 +76,11 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
         />
         {selectedFeatures.features.length > 0 && (
           <GeoJSON
-            key={`kommuner-${selectionKey}-${detailPercent}-${havgrenseKey}`}
+            key={`selection-${selectionKey}-${detailPercent}-${havgrenseKey}`}
             data={selectedFeatures}
             style={() => ({ color: '#1d4ed8', weight: 1.5, fillColor: '#3b82f6', fillOpacity: 0.45 })}
-            onEachFeature={(feature: Feature<AreaGeometry, KommuneProperties>, layer) => {
-              layer.bindTooltip(feature.properties.kommunenavn, { sticky: true })
+            onEachFeature={(feature: Feature<AreaGeometry, SelectedProperties>, layer) => {
+              layer.bindTooltip(featureLabel(feature.properties), { sticky: true })
             }}
           />
         )}
@@ -79,8 +90,8 @@ export function MapPreview({ selectedFeatures, contextFylker, detailPercent, hav
       <p className="sr-only" aria-live="polite">
         {selectedFeatures.features.length === 0
           ? 'Ingen kommuner er valgt ennå. Kartet viser hele Norge.'
-          : `Kartet viser ${selectedFeatures.features.length} valgte kommuner: ${selectedFeatures.features
-              .map((f) => f.properties.kommunenavn)
+          : `Kartet viser ${selectedFeatures.features.length} valgte områder: ${selectedFeatures.features
+              .map((f) => featureLabel(f.properties))
               .join(', ')}.`}
       </p>
     </div>

@@ -1,5 +1,4 @@
-// Builds the single bundled data file the app ships with — now four layers
-// (with and without "havgrense", the maritime border):
+// Builds the single bundled data file the app ships with — five layers:
 //
 //   - fylker / kommuner:                   official Basisdata borders, which
 //                                            extend out to the territorial
@@ -9,8 +8,12 @@
 //                                            files in data-pipeline/source/),
 //                                            for users who'd rather not ship
 //                                            large empty-sea polygons
+//   - bydeler:                             city districts / sub-areas for six
+//                                            kommuner (Bergen, Fredrikstad,
+//                                            Kristiansand, Oslo, Stavanger,
+//                                            Trondheim)
 //
-// The four layers are combined into *one* shared topology:
+// The five layers are combined into *one* shared topology:
 //
 //   1. Import all four normalized layers together ("combine-files") so
 //      mapshaper builds *shared topology* — every coincident border (kommune
@@ -65,8 +68,9 @@ const args = [
   path.join(workDir, 'kommuner.geojson'),
   path.join(workDir, 'fylker-uten-havgrense.geojson'),
   path.join(workDir, 'kommuner-uten-havgrense.geojson'),
+  path.join(workDir, 'bydeler.geojson'),
   '-rename-layers',
-  'fylker,kommuner,fylkerUtenHavgrense,kommunerUtenHavgrense',
+  'fylker,kommuner,fylkerUtenHavgrense,kommunerUtenHavgrense,bydeler',
   '-simplify',
   'visvalingam',
   'keep-shapes',

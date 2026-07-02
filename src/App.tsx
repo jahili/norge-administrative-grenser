@@ -5,12 +5,22 @@ import { useSelection } from './hooks/useSelection'
 import { useSimplifiedTopology } from './hooks/useSimplifiedTopology'
 import { FylkeSelector } from './components/FylkeSelector'
 import { KommuneSelector } from './components/KommuneSelector'
+import { BydelSelector } from './components/BydelSelector'
 import { HavgrenseToggle } from './components/HavgrenseToggle'
 import { MapPreview } from './components/MapPreview'
 import { SimplificationControl } from './components/SimplificationControl'
 import { ExportPanel } from './components/ExportPanel'
-import { selectedFeatureCollection, buildExport, downloadBlob } from './lib/exportData'
-import { selectionFilenameStem, fylkeSelectionFilenameStem } from './lib/filename'
+import {
+  selectedFeatureCollection,
+  selectedBydelFeatureCollection,
+  buildExport,
+  downloadBlob,
+} from './lib/exportData'
+import {
+  selectionFilenameStem,
+  fylkeSelectionFilenameStem,
+  bydelSelectionFilenameStem,
+} from './lib/filename'
 import type { ExportFormat, ExportGranularity, AreaGeometry, FylkeProperties, KommuneProperties } from './lib/types'
 import type { FeatureCollection } from 'geojson'
 
@@ -48,11 +58,13 @@ function App() {
 interface WorkspaceProps {
   topology: import('./hooks/useTopology').NorwayTopology['topology']
   fylker: import('./lib/types').FylkeProperties[]
+  kommuner: import('./lib/types').KommuneProperties[]
   kommunerByFylke: Map<string, import('./lib/types').KommuneProperties[]>
+  bydelsByKommune: Map<string, import('./lib/types').BydelProperties[]>
 }
 
-function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
-  const selection = useSelection(fylker, kommunerByFylke)
+function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommune }: WorkspaceProps) {
+  const selection = useSelection(fylker, kommunerByFylke, bydelsByKommune)
   const [detailPercent, setDetailPercent] = useState(100)
   const [format, setFormat] = useState<ExportFormat>('geojson')
   const [granularity, setGranularity] = useState<ExportGranularity>('kommuner')
@@ -87,19 +99,45 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
     }
   }, [simplifiedTopology, fylkeObject, selection.selectedFylker])
 
+  // Selected bydeler extracted from the simplified topology for preview + export.
+  const selectedBydelFeatures = useMemo(
+    () => selectedBydelFeatureCollection(simplifiedTopology, selection.selectedBydeler),
+    [simplifiedTopology, selection.selectedBydeler],
+  )
+
+  // Which of the currently selected kommuner have bydeler in our dataset?
+  const kommunerMedBydeler = useMemo(
+    () =>
+      kommuner.filter(
+        (k) => selection.selectedKommuner.has(k.kommunenummer) && bydelsByKommune.has(k.kommunenummer),
+      ),
+    [kommuner, selection.selectedKommuner, bydelsByKommune],
+  )
+
+  const hasBydelChoice = kommunerMedBydeler.length > 0
+  // The bydel selector appears as step 3, which pushes the export to step 4.
+  const exportStep = hasBydelChoice ? 4 : 3
+
   // Whole fylker can be exported either as themselves or broken down into
   // their kommuner — only offer the choice when at least one whole fylke is
   // selected (otherwise there's nothing to export at fylke granularity).
   const showGranularityChoice = selection.selectedFylker.size > 0
-  const effectiveGranularity: ExportGranularity = showGranularityChoice ? granularity : 'kommuner'
+
+  const effectiveGranularity: ExportGranularity = (() => {
+    if (showGranularityChoice && granularity === 'fylker') return 'fylker'
+    if (hasBydelChoice && granularity === 'bydeler') return 'bydeler'
+    return 'kommuner'
+  })()
 
   const exportTarget = useMemo<
     | { granularity: 'fylker'; features: FeatureCollection<AreaGeometry, FylkeProperties> }
     | { granularity: 'kommuner'; features: FeatureCollection<AreaGeometry, KommuneProperties> }
+    | { granularity: 'bydeler'; features: FeatureCollection<AreaGeometry, import('./lib/types').BydelProperties> }
   >(() => {
     if (effectiveGranularity === 'fylker') return { granularity: 'fylker', features: contextFylker }
+    if (effectiveGranularity === 'bydeler') return { granularity: 'bydeler', features: selectedBydelFeatures }
     return { granularity: 'kommuner', features: selectedFeatures }
-  }, [effectiveGranularity, contextFylker, selectedFeatures])
+  }, [effectiveGranularity, contextFylker, selectedBydelFeatures, selectedFeatures])
 
   const exportResult = useMemo(
     () =>
@@ -114,8 +152,27 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
     if (exportTarget.granularity === 'fylker') {
       return fylkeSelectionFilenameStem(exportTarget.features.features.map((f) => f.properties))
     }
+    if (exportTarget.granularity === 'bydeler') {
+      return bydelSelectionFilenameStem(
+        exportTarget.features.features.map((f) => f.properties),
+        bydelsByKommune,
+        kommuner,
+      )
+    }
     return selectionFilenameStem(exportTarget.features.features.map((f) => f.properties), fylker, kommunerByFylke)
-  }, [exportTarget, fylker, kommunerByFylke])
+  }, [exportTarget, fylker, kommuner, kommunerByFylke, bydelsByKommune])
+
+  // Map preview shows bydeler when that granularity is active, otherwise kommuner.
+  const previewFeatures = effectiveGranularity === 'bydeler' ? selectedBydelFeatures : selectedFeatures
+  const previewCount = previewFeatures.features.length
+  const previewLabel =
+    effectiveGranularity === 'bydeler'
+      ? previewCount === 0
+        ? 'Ingen bydeler valgt ennå.'
+        : `${previewCount} bydel${previewCount === 1 ? '' : 'er'} valgt.`
+      : previewCount === 0
+        ? 'Ingen kommuner valgt ennå.'
+        : `${previewCount} kommune${previewCount === 1 ? '' : 'r'} valgt.`
 
   function handleDownload(filename: string) {
     if (!exportResult) return
@@ -127,6 +184,11 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
       <div className="flex flex-col gap-6">
         <FylkeSelector fylker={fylker} selection={selection} />
         <KommuneSelector fylker={fylker} kommunerByFylke={kommunerByFylke} selection={selection} />
+        <BydelSelector
+          kommunerMedBydeler={kommunerMedBydeler}
+          bydelsByKommune={bydelsByKommune}
+          selection={selection}
+        />
       </div>
 
       <div className="flex flex-col gap-6">
@@ -135,16 +197,12 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
         <section aria-label="Kartforhåndsvisning">
           <h2 className="mb-2 text-sm font-semibold text-slate-900">Forhåndsvisning</h2>
           <MapPreview
-            selectedFeatures={selectedFeatures}
+            selectedFeatures={previewFeatures}
             contextFylker={contextFylker}
             detailPercent={detailPercent}
             havgrenseKey={medHavgrense ? 'med' : 'uten'}
           />
-          <p className="mt-2 text-sm text-slate-500">
-            {selectedFeatures.features.length === 0
-              ? 'Ingen kommuner valgt ennå.'
-              : `${selectedFeatures.features.length} kommune${selectedFeatures.features.length === 1 ? '' : 'r'} valgt.`}
-          </p>
+          <p className="mt-2 text-sm text-slate-500">{previewLabel}</p>
         </section>
 
         <SimplificationControl
@@ -160,10 +218,12 @@ function Workspace({ topology, fylker, kommunerByFylke }: WorkspaceProps) {
           granularity={effectiveGranularity}
           onGranularityChange={setGranularity}
           showGranularityChoice={showGranularityChoice}
+          showBydelChoice={hasBydelChoice}
           onDownload={handleDownload}
           disabled={!exportResult}
           defaultFilenameStem={filenameStem}
           extension={exportResult?.extension ?? null}
+          step={exportStep}
         />
       </div>
     </div>

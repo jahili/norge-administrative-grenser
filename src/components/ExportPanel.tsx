@@ -6,11 +6,17 @@ interface ExportPanelProps {
   onFormatChange: (format: ExportFormat) => void
   granularity: ExportGranularity
   onGranularityChange: (granularity: ExportGranularity) => void
+  /** Show the fylker vs. kommuner granularity choice (when whole fylker are selected). */
   showGranularityChoice: boolean
+  /** Show the bydeler granularity option (when selected kommuner have bydeler). */
+  showBydelChoice: boolean
   onDownload: (filename: string) => void
   disabled: boolean
   defaultFilenameStem: string | null
   extension: string | null
+  /** Step number shown in the heading (default 3; caller bumps to 4 when the
+   *  optional bydel selector is visible). */
+  step?: number
 }
 
 export function ExportPanel({
@@ -19,10 +25,12 @@ export function ExportPanel({
   granularity,
   onGranularityChange,
   showGranularityChoice,
+  showBydelChoice,
   onDownload,
   disabled,
   defaultFilenameStem,
   extension,
+  step = 3,
 }: ExportPanelProps) {
   // Pre-fill the filename field with the computed suggestion, but let the
   // user override it freely. The parent remounts this panel (via `key`)
@@ -34,20 +42,28 @@ export function ExportPanel({
   const effectiveStem = stem.trim() || defaultFilenameStem
   const filename = effectiveStem && extension ? `${effectiveStem}.${extension}` : null
 
+  // Build the list of granularity options shown in the UI.
+  type GranularityOption = { value: ExportGranularity; label: string }
+  const granularityOptions: GranularityOption[] = []
+  if (showGranularityChoice || showBydelChoice) {
+    granularityOptions.push({ value: 'kommuner', label: 'Kommunegrenser' })
+  }
+  if (showGranularityChoice) {
+    granularityOptions.push({ value: 'fylker', label: 'Fylkesgrenser' })
+  }
+  if (showBydelChoice) {
+    granularityOptions.push({ value: 'bydeler', label: 'Bydeler' })
+  }
+
   return (
     <div className="rounded-lg border border-slate-200 p-4">
-      <h2 className="text-sm font-semibold text-slate-900">3. Last ned</h2>
+      <h2 className="text-sm font-semibold text-slate-900">{step}. Last ned</h2>
 
-      {showGranularityChoice && (
+      {granularityOptions.length > 0 && (
         <fieldset className="mt-3">
           <legend className="text-sm text-slate-600">Inndeling</legend>
           <div className="mt-1 flex gap-4">
-            {(
-              [
-                { value: 'kommuner', label: 'Kommunegrenser' },
-                { value: 'fylker', label: 'Fylkesgrenser' },
-              ] as const
-            ).map(({ value, label }) => (
+            {granularityOptions.map(({ value, label }) => (
               <label key={value} className="flex items-center gap-2 text-sm text-slate-700">
                 <input
                   type="radio"
@@ -60,10 +76,17 @@ export function ExportPanel({
               </label>
             ))}
           </div>
-          <p className="mt-1 text-xs text-slate-500">
-            Fylkesgrenser eksporterer hele fylker som sammenhengende områder, uten å dele dem opp i
-            kommuner.
-          </p>
+          {showGranularityChoice && (
+            <p className="mt-1 text-xs text-slate-500">
+              Fylkesgrenser eksporterer hele fylker som sammenhengende områder, uten å dele dem opp i
+              kommuner.
+            </p>
+          )}
+          {showBydelChoice && (
+            <p className="mt-1 text-xs text-slate-500">
+              Bydeler eksporterer de valgte bydelene for kommuner som har bydelsinndeling.
+            </p>
+          )}
         </fieldset>
       )}
 

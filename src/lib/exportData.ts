@@ -2,7 +2,7 @@ import * as topojsonClient from 'topojson-client'
 import { topology as buildTopology } from 'topojson-server'
 import type { FeatureCollection } from 'geojson'
 import type { NorwayTopologyType } from '../hooks/useTopology'
-import type { AreaGeometry, ExportFormat, ExportGranularity, KommuneProperties } from './types'
+import type { AreaGeometry, BydelProperties, ExportFormat, ExportGranularity, FylkeProperties, KommuneProperties } from './types'
 
 /** Extracts the selected kommuner from one of the bundled kommune layers (with or without "havgrense") as a standalone GeoJSON FeatureCollection (WGS84). */
 export function selectedFeatureCollection(
@@ -24,15 +24,33 @@ export function selectedFeatureCollection(
   }
 }
 
+/** Extracts the selected bydeler from the bundled bydeler layer. */
+export function selectedBydelFeatureCollection(
+  topology: NorwayTopologyType,
+  selectedBydeler: Set<string>,
+): FeatureCollection<AreaGeometry, BydelProperties> {
+  const all = topojsonClient.feature(topology, topology.objects.bydeler) as FeatureCollection<
+    AreaGeometry,
+    BydelProperties
+  >
+  return {
+    type: 'FeatureCollection',
+    features: all.features.filter((f) => selectedBydeler.has(f.properties.bydelnummer)),
+  }
+}
+
 /**
  * Builds the file to download, in the requested format and granularity.
  *  - GeoJSON: the plain FeatureCollection of selected features.
  *  - TopoJSON: a fresh topology built from just the selected features (named
- *    after the granularity, "kommuner" or "fylker"), so the download only
- *    contains the selection — not the whole bundled dataset's arcs.
+ *    after the granularity, "kommuner", "fylker", or "bydeler"), so the
+ *    download only contains the selection — not the whole bundled dataset's arcs.
  */
-export function buildExport<P extends KommuneProperties | { fylkesnummer: string; fylkesnavn: string }>(
-  features: FeatureCollection<AreaGeometry, P>,
+export function buildExport(
+  features:
+    | FeatureCollection<AreaGeometry, FylkeProperties>
+    | FeatureCollection<AreaGeometry, KommuneProperties>
+    | FeatureCollection<AreaGeometry, BydelProperties>,
   granularity: ExportGranularity,
   format: ExportFormat,
 ): { blob: Blob; extension: string } {

@@ -1,4 +1,4 @@
-import type { FylkeProperties, KommuneProperties } from './types'
+import type { BydelProperties, FylkeProperties, KommuneProperties } from './types'
 
 /** Norwegian names contain spaces, slashes and æøå — keep the latter (valid in
  * filenames on every OS we care about) but normalize the rest for a clean,
@@ -52,4 +52,34 @@ export function fylkeSelectionFilenameStem(selectedFylker: FylkeProperties[]): s
     return `${slugify(selectedFylker[0].fylkesnavn)}-fylke`
   }
   return `${selectedFylker.length}-fylker-utvalg`
+}
+
+/**
+ * Builds a filename stem for a bydel-level export:
+ *  - one bydel selected                   → "grünerløkka"
+ *  - all bydeler in one kommune           → "oslo-bydeler"
+ *  - mix                                  → "n-bydeler-utvalg"
+ */
+export function bydelSelectionFilenameStem(
+  selectedBydeler: BydelProperties[],
+  bydelsByKommune: Map<string, BydelProperties[]>,
+  kommuner: KommuneProperties[],
+): string {
+  if (selectedBydeler.length === 1) {
+    return slugify(selectedBydeler[0].bydelnavn)
+  }
+
+  if (selectedBydeler.length > 1) {
+    const kommunenumreInSelection = new Set(selectedBydeler.map((b) => b.kommunenummer))
+    if (kommunenumreInSelection.size === 1) {
+      const [kommunenummer] = kommunenumreInSelection
+      const allBydelerInKommune = bydelsByKommune.get(kommunenummer) ?? []
+      if (allBydelerInKommune.length === selectedBydeler.length) {
+        const kommune = kommuner.find((k) => k.kommunenummer === kommunenummer)
+        if (kommune) return `${slugify(kommune.kommunenavn)}-bydeler`
+      }
+    }
+  }
+
+  return `${selectedBydeler.length}-bydeler-utvalg`
 }
