@@ -56,9 +56,16 @@ function App() {
           Norge – administrative grenser
         </h1>
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
-          Velg fylker og kommuner, forhåndsvis utvalget på kartet, og last det ned som GeoJSON
-          eller TopoJSON i WGS84 (EPSG:4326). Alt skjer i nettleseren — ingen data sendes til en
-          server.
+          Her kan du finne og laste ned kartdata for norske administrative grenser. Velg mellom
+          fylker, kommuner og bydeler, og last ned grensene i GeoJSON- eller TopoJSON-format.
+        </p>
+        <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
+          Appen gjør det enkelt å hente ut kartgrunnlag til analyser, visualiseringer og webkart
+          – enten du trenger hele landet, utvalgte områder eller bestemte administrative nivåer.
+          Alt skjer lokalt i nettleseren – ingen data sendes til en server.
+        </p>
+        <p className="mt-3 text-xs font-medium tracking-wide text-slate-400 uppercase dark:text-slate-500">
+          Kartdata oppdatert i 2026
         </p>
       </header>
 

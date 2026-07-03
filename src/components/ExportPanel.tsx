@@ -59,6 +59,7 @@ export function ExportPanel({
   return (
     <div className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Last ned</h2>
+      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Koordinatsystem: WGS84 (EPSG:4326)</p>
 
       <fieldset className="mt-3">
         <legend className="text-sm text-slate-600 dark:text-slate-400">Filformat</legend>
