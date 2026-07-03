@@ -40,18 +40,26 @@ function App() {
 
   return (
     <div className="mx-auto max-w-6xl p-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
-            Norge – administrative grenser
-          </h1>
-          <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
-            Velg fylker og kommuner, forhåndsvis utvalget på kartet, og last det ned som GeoJSON
-            eller TopoJSON i WGS84 (EPSG:4326). Alt skjer i nettleseren — ingen data sendes til en
-            server.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <img
+          src={`${import.meta.env.BASE_URL}logo.png`}
+          alt="Plotikon"
+          className="h-10 w-auto"
+          width={44}
+          height={40}
+        />
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      </div>
+
+      <header className="mt-6">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+          Norge – administrative grenser
+        </h1>
+        <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
+          Velg fylker og kommuner, forhåndsvis utvalget på kartet, og last det ned som GeoJSON
+          eller TopoJSON i WGS84 (EPSG:4326). Alt skjer i nettleseren — ingen data sendes til en
+          server.
+        </p>
       </header>
 
       <main className="mt-8">
