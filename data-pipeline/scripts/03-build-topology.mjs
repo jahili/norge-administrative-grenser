@@ -1,13 +1,21 @@
 // Builds the single bundled data file the app ships with — five layers:
 //
-//   - fylker / kommuner:                   official Basisdata borders, which
-//                                            extend out to the territorial
-//                                            sea boundary
-//   - fylkerUtenHavgrense / kommunerUtenHavgrense: coastline-clipped borders
-//                                            (from user-provided Basisdata
-//                                            files in data-pipeline/source/),
-//                                            for users who'd rather not ship
-//                                            large empty-sea polygons
+//   - kommuner / kommunerUtenHavgrense:    kommune borders, either extending
+//                                            out to the territorial sea
+//                                            boundary ("havgrense") or clipped
+//                                            to the coastline
+//   - fylker / fylkerUtenHavgrense:        fylke borders, DERIVED here by
+//                                            dissolving the two kommune layers
+//                                            on `fylkesnummer`. The standalone
+//                                            Basisdata fylke files turned out
+//                                            to carry identical geometry for
+//                                            both variants (the "uten
+//                                            havgrense" fylke file was not
+//                                            actually coast-clipped), so the
+//                                            fylke toggle did nothing. Deriving
+//                                            the fylke outline from its kommuner
+//                                            guarantees each variant matches
+//                                            its kommune layer exactly.
 //   - bydeler:                             city districts / sub-areas for six
 //                                            kommuner (Bergen, Fredrikstad,
 //                                            Kristiansand, Oslo, Stavanger,
@@ -57,30 +65,46 @@ await mkdir(workDir, { recursive: true })
 // Calling mapshaper's Node API directly (rather than shelling out to its CLI)
 // sidesteps Windows path/quoting issues with spaces in "C:\Users\Jan Hiroshi\...".
 //
-// `combine-files` takes the target layer name from each input file's
-// basename, so the four work files are named to land as `fylker`, `kommuner`,
-// `fylker-uten-havgrense` and `kommuner-uten-havgrense` — renamed to the
-// camelCase TopoJSON object names the app expects via `-rename-layers`.
+// `combine-files` takes the target layer name from each input file's basename;
+// the three kommune/bydel work files land as `kommuner`,
+// `kommuner-uten-havgrense` and `bydeler`, renamed to the camelCase TopoJSON
+// object names the app expects. The two fylke layers are then derived by
+// dissolving each kommune layer on `fylkesnummer` (keeping `fylkesnavn`) into a
+// new layer — done before `-simplify` so fylke and kommune borders share arcs.
+// `target=*` on the later commands keeps every layer in scope after the
+// dissolves change the active target.
 const args = [
   '-i',
   'combine-files',
-  path.join(workDir, 'fylker.geojson'),
   path.join(workDir, 'kommuner.geojson'),
-  path.join(workDir, 'fylker-uten-havgrense.geojson'),
   path.join(workDir, 'kommuner-uten-havgrense.geojson'),
   path.join(workDir, 'bydeler.geojson'),
   '-rename-layers',
-  'fylker,kommuner,fylkerUtenHavgrense,kommunerUtenHavgrense,bydeler',
+  'kommuner,kommunerUtenHavgrense,bydeler',
+  '-dissolve',
+  'fylkesnummer',
+  'copy-fields=fylkesnavn',
+  '+',
+  'name=fylker',
+  'target=kommuner',
+  '-dissolve',
+  'fylkesnummer',
+  'copy-fields=fylkesnavn',
+  '+',
+  'name=fylkerUtenHavgrense',
+  'target=kommunerUtenHavgrense',
   '-simplify',
   'visvalingam',
   'keep-shapes',
   '20%',
+  'target=*',
   '-o',
   outFile,
   'format=topojson',
   'presimplify',
   'quantization=1e5',
   'force',
+  'target=*',
 ]
 
 console.log(`[run] mapshaper ${args.join(' ')}`)

@@ -44,7 +44,7 @@ Alt skjer i nettleseren — ingen data sendes til noen server.
 
 ### Arkitektur
 
-Appen laster én ferdigbygd TopoJSON-fil (~2,8 MB) med fem lag som deler samme
+Appen laster én ferdigbygd TopoJSON-fil (~3,2 MB) med fem lag som deler samme
 buesett (arcs):
 
 | Lag | Innhold |

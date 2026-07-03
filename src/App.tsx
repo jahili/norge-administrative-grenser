@@ -74,7 +74,7 @@ function App() {
           <div className="flex items-center gap-3 py-10">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700 dark:border-slate-700 dark:border-t-teal-400" />
             <p role="status" className="text-slate-600 dark:text-slate-400">
-              Laster inn kartdata (2,8 MB) …
+              Laster inn kartdata (3,2 MB) …
             </p>
           </div>
         )}
