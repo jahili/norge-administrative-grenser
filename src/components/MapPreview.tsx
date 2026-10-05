@@ -30,11 +30,21 @@ const NORWAY_CENTER: [number, number] = [64.5, 13]
 const NORWAY_ZOOM = 4
 
 // Monochrome basemaps that match the app's grayscale design; the default OSM
-// tiles are far too colorful next to it.
+// tiles are far too colorful next to it. Esri's Canvas basemaps need no API key
+// (CARTO's basemaps now return an "API KEY REQUIRED" placeholder tile).
+const ESRI_CANVAS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas'
 const TILES = {
-  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  light: {
+    base: `${ESRI_CANVAS}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+    labels: `${ESRI_CANVAS}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
+  },
+  dark: {
+    base: `${ESRI_CANVAS}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+    labels: `${ESRI_CANVAS}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
+  },
 } as const
+const TILE_ATTRIBUTION = 'Powered by <a href="https://www.esri.com">Esri</a> | Esri, HERE, Garmin, &copy; OpenStreetMap-bidragsytere'
+const TILE_MAX_ZOOM = 16
 
 const SELECTED_STYLE = {
   light: { color: '#0f766e', weight: 1.5, fillColor: '#14b8a6', fillOpacity: 0.4 },
@@ -91,8 +101,14 @@ export function MapPreview({
       >
         <TileLayer
           key={`tiles-${theme}`}
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsytere &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url={TILES[theme]}
+          attribution={TILE_ATTRIBUTION}
+          url={TILES[theme].base}
+          maxNativeZoom={TILE_MAX_ZOOM}
+        />
+        <TileLayer
+          key={`labels-${theme}`}
+          url={TILES[theme].labels}
+          maxNativeZoom={TILE_MAX_ZOOM}
         />
 
         {/* Fylke layer: filled when fylker is the export target, dashed outline otherwise */}
