@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Tailwind scans every project file for class names. The bundled map data is
+   a single 3.7 MB line of numbers that its scanner needs 15+ minutes to get
+   through (and that only yields false-positive classes), so skip the data. */
+@source not "./assets";
+@source not "../data-pipeline";
+
 /* Class-based dark mode: `dark:` utilities apply when <html> has .dark,
    which useTheme/index.html manage (system preference + manual override). */
 @custom-variant dark (&:where(.dark, .dark *));
