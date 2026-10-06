@@ -20,7 +20,7 @@
 // fjord coastline. Instead, they are committed as source files in
 // data-pipeline/source/ and copied here into raw/ for use by the pipeline.
 
-import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { createWriteStream, existsSync } from 'node:fs'
 import { Readable } from 'node:stream'
 import { finished } from 'node:stream/promises'
@@ -36,12 +36,10 @@ const zipSources = [
   {
     name: 'fylker',
     url: 'https://nedlasting.geonorge.no/geonorge/Basisdata/Fylker/GeoJSON/Basisdata_0000_Norge_4258_Fylker_GeoJSON.zip',
-    extractedFile: 'Basisdata_0000_Norge_4258_Fylke_GeoJSON.geojson',
   },
   {
     name: 'kommuner',
     url: 'https://nedlasting.geonorge.no/geonorge/Basisdata/Kommuner/GeoJSON/Basisdata_0000_Norge_4258_Kommuner_GeoJSON.zip',
-    extractedFile: 'Basisdata_0000_Norge_4258_Kommune_GeoJSON.geojson',
   },
 ]
 
@@ -75,7 +73,13 @@ for (const source of zipSources) {
   await mkdir(extractDir, { recursive: true })
   execFileSync('unzip', ['-o', zipPath, '-d', extractDir], { stdio: 'inherit' })
 
-  const extractedPath = path.join(extractDir, source.extractedFile)
+  // Geonorge has renamed the file inside the zip before (…_Fylke_… →
+  // …_Fylker_…), so locate the single GeoJSON file rather than hardcoding it.
+  const geojsonFiles = (await readdir(extractDir)).filter((f) => f.endsWith('.geojson'))
+  if (geojsonFiles.length !== 1) {
+    throw new Error(`Expected one .geojson file in ${source.name}.zip, found: ${geojsonFiles.join(', ') || 'none'}`)
+  }
+  const extractedPath = path.join(extractDir, geojsonFiles[0])
   let text = await readFile(extractedPath, 'utf-8')
   if (text.charCodeAt(0) === 0xfeff) text = text.slice(1) // strip BOM
 

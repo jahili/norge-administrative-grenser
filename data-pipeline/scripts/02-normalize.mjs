@@ -36,10 +36,26 @@ const sourceDir = path.join(__dirname, '..', 'source')
 const workDir = path.join(__dirname, '..', 'work')
 await mkdir(workDir, { recursive: true })
 
-async function readGeonorgeCollection(file, wrapperKey) {
+/**
+ * Reads a Geonorge collection and keeps only the area features of `objtype`.
+ *
+ * Geonorge has shipped two layouts: older files wrapped the areas in a key
+ * named after the object type (`{ "Fylke": { features } }`), while the files
+ * published from July 2026 are a plain FeatureCollection that mixes the areas
+ * ("Fylke"/"Kommune" MultiPolygons) with their border lines ("Grense"
+ * LineStrings). Accept both, and drop everything that isn't an area of the
+ * requested type. Features without `objtype` are kept, for sources that don't
+ * carry it.
+ */
+async function readGeonorgeCollection(file, objtype) {
   const text = await readFile(path.join(rawDir, file), 'utf-8')
   const json = JSON.parse(text)
-  return wrapperKey ? json[wrapperKey] : json
+  const collection = json.features ? json : json[objtype]
+  if (!collection?.features) throw new Error(`${file}: found neither "features" nor a "${objtype}" collection`)
+  return {
+    ...collection,
+    features: collection.features.filter((f) => !f.properties.objtype || f.properties.objtype === objtype),
+  }
 }
 
 function primaryName(properties, combinedField) {
@@ -51,7 +67,7 @@ function primaryName(properties, combinedField) {
 }
 
 const fylkeRaw = await readGeonorgeCollection('fylker.geojson', 'Fylke')
-const kommuneRaw = await readGeonorgeCollection('kommuner.geojson', null)
+const kommuneRaw = await readGeonorgeCollection('kommuner.geojson', 'Kommune')
 
 const fylkeFeatures = fylkeRaw.features.map((feature) => {
   const fylkesnummer = feature.properties.fylkesnummer
@@ -111,7 +127,7 @@ console.log(`[done] normalized ${fylkeFeatures.length} fylker and ${kommuneFeatu
 
 // --- "Uten havgrense" layers (coastline-clipped, no maritime border extension) ---
 
-const kommuneUtenRaw = await readGeonorgeCollection('kommuner-uten-havgrense.geojson', null)
+const kommuneUtenRaw = await readGeonorgeCollection('kommuner-uten-havgrense.geojson', 'Kommune')
 
 const kommuneFeaturesUtenHavgrense = kommuneUtenRaw.features
   .map((feature) =>
@@ -135,7 +151,7 @@ await writeFile(
   JSON.stringify({ type: 'FeatureCollection', features: kommuneFeaturesUtenHavgrense }),
 )
 
-const fylkeUtenRaw = await readGeonorgeCollection('fylker-uten-havgrense.geojson', null)
+const fylkeUtenRaw = await readGeonorgeCollection('fylker-uten-havgrense.geojson', 'Fylke')
 
 const fylkeFeaturesUtenHavgrense = fylkeUtenRaw.features
   .map((feature) => ({

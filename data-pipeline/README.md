@@ -56,3 +56,10 @@ kjøres.
   i samme steg som forenklingen — og gjenbruker topologien som allerede er
   bygget, som gir et ryddigere resultat enn å bygge topologi på nytt fra to
   uavhengig prosesserte filer. `geo2topo` er derfor ikke lenger en avhengighet.
+- **Geonorges filformat**: Filene publisert fra juli 2026 har nye filnavn i
+  zip-arkivene (`…_Fylker_…` i stedet for `…_Fylke_…`), er en vanlig
+  FeatureCollection i stedet for å ligge under en `Fylke`-nøkkel, og blander
+  flatene (`objtype` «Fylke»/«Kommune») med grenselinjene (`objtype`
+  «Grense»). Steg 1 finner derfor GeoJSON-filen i arkivet selv, og steg 2
+  godtar begge oppsettene og beholder bare flatene. Geometrien er uendret: et
+  nytt bygg i oktober 2026 ga en byte-identisk fil.
