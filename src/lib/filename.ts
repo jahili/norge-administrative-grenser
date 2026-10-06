@@ -1,13 +1,13 @@
 import { DISTRIKT_KINDS, kommuneGruppeId } from './distrikter'
 import type { BydelProperties, DistriktKind, FylkeProperties, GruppeKind, KommuneGruppe, KommuneProperties } from './types'
 
-/** Norwegian names contain spaces, slashes and æøå — keep the latter (valid in
- * filenames on every OS we care about) but normalize the rest for a clean,
- * URL- and shell-safe download name. */
+/** Norwegian names contain spaces, slashes, æøå and Sami letters (á, š, …) —
+ * keep every letter (valid in filenames on every OS we care about) but
+ * normalize the rest for a clean, URL- and shell-safe download name. */
 function slugify(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-zæøå0-9]+/g, '-')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '')
 }
 

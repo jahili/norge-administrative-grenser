@@ -102,3 +102,16 @@ export function downloadBlob(blob: Blob, filename: string): void {
   link.click()
   URL.revokeObjectURL(url)
 }
+
+/**
+ * The attribute table of an export (no geometry) as CSV, for joining in Excel
+ * or Power BI. Semicolon-separated with a UTF-8 BOM, which is what Norwegian
+ * Excel expects. Every value is quoted, so names containing ";" are safe —
+ * but note that Excel still strips leading zeros ("0301" → 301) when simply
+ * opening the file; the UI tells users to import the key column as text.
+ */
+export function buildCsv(columns: string[], rows: Record<string, string>[]): Blob {
+  const quote = (value: string) => `"${value.replaceAll('"', '""')}"`
+  const lines = [columns.map(quote).join(';'), ...rows.map((row) => columns.map((c) => quote(row[c] ?? '')).join(';'))]
+  return new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+}

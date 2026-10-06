@@ -1,16 +1,21 @@
 // Reads the raw Geonorge GeoJSON for fylker and kommuner and rewrites each
 // feature with a small, flat set of properties:
-//   fylke:    fylkesnummer, fylkesnavn
-//   kommune:  kommunenummer, kommunenavn, fylkesnummer, fylkesnavn
+//   fylke:    fylkesnummer, fylkesnavn, fylkesnavnOffisielt
+//   kommune:  kommunenummer, kommunenavn, kommunenavnOffisielt,
+//             fylkesnummer, fylkesnavn, fylkesnavnOffisielt
 //
 // Two normalizations worth calling out:
 //
-// 1. Geonorge's `fylkesnavn` is sometimes a hyphen-joined list of official
-//    names in several languages, e.g. "Troms - Romsa - Tromssa" (Norwegian,
-//    Northern Sami, Kven). That's unwieldy for display, lists and filenames,
-//    so we use the primary Norwegian Bokmål/Nynorsk name from the
-//    `administrativenhetnavn` array instead (falling back to the combined
-//    string, split on " - ", if no "nor" entry exists).
+// 1. 22 kommuner and 5 fylker have official names in several languages, e.g.
+//    "Guovdageaidnu - Kautokeino" or "Troms - Romsa - Tromssa" (Norwegian,
+//    Sami languages, Kven). That's unwieldy for display, lists and filenames,
+//    so `kommunenavn`/`fylkesnavn` is the Norwegian name from the
+//    `administrativenhetnavn` array, while `…Offisielt` keeps the full
+//    official name — every language, in the official order (`rekkefolge`).
+//    Kartverket's extract can lag behind name changes (Oslo became
+//    "Oslo - Oslove" on 2026-01-01), so where SSB's name for a code changed
+//    after the extract (raw/ssb-navneendringer.json, from 01-download) and
+//    Kartverket still has the old name, the official name is SSB's new one.
 //
 // 2. The kommune dataset doesn't carry fylkesnummer/fylkesnavn directly.
 //    Norway's kommunenummer encodes the fylke as its first two digits, so we
@@ -23,6 +28,7 @@
 // functions apply to both variants.
 
 import { createRequire } from 'node:module'
+import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -66,34 +72,79 @@ function primaryName(properties, combinedField) {
   return combined ? combined.split(' - ')[0] : combined
 }
 
+const navneendringerPath = path.join(rawDir, 'ssb-navneendringer.json')
+const navneendringer = existsSync(navneendringerPath)
+  ? JSON.parse(await readFile(navneendringerPath, 'utf-8'))
+  : { kommuner: [], fylker: [] }
+const nyttNavn = {
+  kommuner: new Map(navneendringer.kommuner.map((c) => [c.code, c])),
+  fylker: new Map(navneendringer.fylker.map((c) => [c.code, c])),
+}
+const brukteNavneendringer = new Set()
+
+/**
+ * The full official name: every language's name, in the official order — or
+ * SSB's newer name, if the code was renamed after Kartverket's extract.
+ */
+function officialName(properties, combinedField, level, code) {
+  const names = [...(properties.administrativenhetnavn ?? [])]
+  const kartverket =
+    names.length === 0
+      ? properties[combinedField]
+      : names
+          .sort((a, b) => Number(a.rekkefolge) - Number(b.rekkefolge))
+          .map((n) => n.navn)
+          .join(' - ')
+  const change = nyttNavn[level].get(code)
+  if (!change) return kartverket
+  if (change.oldName !== kartverket) {
+    console.warn(
+      `[warn] SSB renamed ${level} ${code} "${change.oldName}" → "${change.newName}", but Kartverket has ` +
+        `"${kartverket}"; keeping Kartverket's name`,
+    )
+    return kartverket
+  }
+  brukteNavneendringer.add(`${code} ${change.newName}`)
+  return change.newName
+}
+
 const fylkeRaw = await readGeonorgeCollection('fylker.geojson', 'Fylke')
 const kommuneRaw = await readGeonorgeCollection('kommuner.geojson', 'Kommune')
 
 const fylkeFeatures = fylkeRaw.features.map((feature) => {
   const fylkesnummer = feature.properties.fylkesnummer
   const fylkesnavn = primaryName(feature.properties, 'fylkesnavn')
+  const fylkesnavnOffisielt = officialName(feature.properties, 'fylkesnavn', 'fylker', fylkesnummer)
   return {
     type: 'Feature',
-    properties: { fylkesnummer, fylkesnavn },
+    properties: { fylkesnummer, fylkesnavn, fylkesnavnOffisielt },
     geometry: feature.geometry,
   }
 })
 
-const fylkesnavnByNummer = new Map(
-  fylkeFeatures.map((f) => [f.properties.fylkesnummer, f.properties.fylkesnavn]),
-)
+const fylkeByNummer = new Map(fylkeFeatures.map((f) => [f.properties.fylkesnummer, f.properties]))
 
-function normalizeKommune(kommunenummer, kommunenavn, geometry) {
+function normalizeKommune(properties, geometry) {
+  const { kommunenummer } = properties
+  const kommunenavn = primaryName(properties, 'kommunenavn')
+  const kommunenavnOffisielt = officialName(properties, 'kommunenavn', 'kommuner', kommunenummer)
   const fylkesnummer = kommunenummer.slice(0, 2)
-  const fylkesnavn = fylkesnavnByNummer.get(fylkesnummer)
-  if (!fylkesnavn) {
+  const fylke = fylkeByNummer.get(fylkesnummer)
+  if (!fylke) {
     throw new Error(
       `Kommune ${kommunenummer} (${kommunenavn}) has no matching fylke ${fylkesnummer}`,
     )
   }
   return {
     type: 'Feature',
-    properties: { kommunenummer, kommunenavn, fylkesnummer, fylkesnavn },
+    properties: {
+      kommunenummer,
+      kommunenavn,
+      kommunenavnOffisielt,
+      fylkesnummer,
+      fylkesnavn: fylke.fylkesnavn,
+      fylkesnavnOffisielt: fylke.fylkesnavnOffisielt,
+    },
     geometry,
   }
 }
@@ -103,13 +154,7 @@ function byNummer(field) {
 }
 
 const kommuneFeatures = kommuneRaw.features
-  .map((feature) =>
-    normalizeKommune(
-      feature.properties.kommunenummer,
-      primaryName(feature.properties, 'kommunenavn'),
-      feature.geometry,
-    ),
-  )
+  .map((feature) => normalizeKommune(feature.properties, feature.geometry))
   .sort(byNummer('kommunenummer'))
 
 fylkeFeatures.sort(byNummer('fylkesnummer'))
@@ -124,19 +169,16 @@ await writeFile(
 )
 
 console.log(`[done] normalized ${fylkeFeatures.length} fylker and ${kommuneFeatures.length} kommuner`)
+if (brukteNavneendringer.size > 0) {
+  console.log(`[done] official names from SSB, newer than Kartverket's extract: ${[...brukteNavneendringer].join('; ')}`)
+}
 
 // --- "Uten havgrense" layers (coastline-clipped, no maritime border extension) ---
 
 const kommuneUtenRaw = await readGeonorgeCollection('kommuner-uten-havgrense.geojson', 'Kommune')
 
 const kommuneFeaturesUtenHavgrense = kommuneUtenRaw.features
-  .map((feature) =>
-    normalizeKommune(
-      feature.properties.kommunenummer,
-      primaryName(feature.properties, 'kommunenavn'),
-      feature.geometry,
-    ),
-  )
+  .map((feature) => normalizeKommune(feature.properties, feature.geometry))
   .sort(byNummer('kommunenummer'))
 
 if (kommuneFeaturesUtenHavgrense.length !== kommuneFeatures.length) {
@@ -159,6 +201,7 @@ const fylkeFeaturesUtenHavgrense = fylkeUtenRaw.features
     properties: {
       fylkesnummer: feature.properties.fylkesnummer,
       fylkesnavn: primaryName(feature.properties, 'fylkesnavn'),
+      fylkesnavnOffisielt: officialName(feature.properties, 'fylkesnavn', 'fylker', feature.properties.fylkesnummer),
     },
     geometry: feature.geometry,
   }))

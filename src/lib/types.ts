@@ -5,14 +5,21 @@ export type AreaGeometry = Polygon | MultiPolygon
 
 export interface FylkeProperties {
   fylkesnummer: string
+  /** Norwegian name. */
   fylkesnavn: string
+  /** Full official name in every language, e.g. "Troms - Romsa - Tromssa". */
+  fylkesnavnOffisielt: string
 }
 
 export interface KommuneProperties {
   kommunenummer: string
+  /** Norwegian name. */
   kommunenavn: string
+  /** Full official name in every language, e.g. "Guovdageaidnu - Kautokeino". */
+  kommunenavnOffisielt: string
   fylkesnummer: string
   fylkesnavn: string
+  fylkesnavnOffisielt: string
   /** Plus an id and a name field per district kind, e.g. politidistriktnummer and
    *  politidistriktnavn (see DISTRIKT_KINDS in ./distrikter). */
   [distriktField: string]: string
@@ -26,6 +33,11 @@ export type DistriktKind =
   | 'okonomiskeRegioner'
   | 'landsdeler'
   | 'helseregioner'
+  | 'familievernregioner'
+  | 'barnevernsregioner'
+  | 'reiselivsregioner'
+  | 'samiskeValgkretser'
+  | 'sentralitet'
 
 /** What kommuner are grouped by in step 1: fylker or one of the district kinds. */
 export type GruppeKind = 'fylker' | DistriktKind

@@ -16,11 +16,13 @@ import { MapPreview } from './components/MapPreview'
 import { SimplificationControl } from './components/SimplificationControl'
 import { ExportPanel } from './components/ExportPanel'
 import { ThemeToggle } from './components/ThemeToggle'
+import { DataTabell } from './components/DataTabell'
 import {
   selectedFeatureCollection,
   selectedBydelFeatureCollection,
   selectedDistriktFeatureCollection,
   buildExport,
+  buildCsv,
   downloadBlob,
 } from './lib/exportData'
 import {
@@ -68,7 +70,7 @@ function App() {
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
           Her kan du finne og laste ned kartdata for norske administrative grenser. Velg mellom
           fylker, kommuner og bydeler, eller grupper kommunene etter politidistrikter,
-          110-distrikter, valgdistrikter, økonomiske regioner, landsdeler eller helseregioner, og last ned
+          valgdistrikter, helseregioner og en rekke andre inndelinger, og last ned
           grensene i GeoJSON- eller TopoJSON-format.
         </p>
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
@@ -86,7 +88,7 @@ function App() {
           <div className="flex items-center gap-3 py-10">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700 dark:border-slate-700 dark:border-t-teal-400" />
             <p role="status" className="text-slate-600 dark:text-slate-400">
-              Laster inn kartdata (4,5 MB) …
+              Laster inn kartdata (5,6 MB) …
             </p>
           </div>
         )}
@@ -109,7 +111,7 @@ function App() {
           >
             Kartverket
           </a>
-          . Politidistrikter, valgdistrikter, økonomiske regioner, landsdeler og helseregioner fra{' '}
+          . Politidistrikter, valgdistrikter og de øvrige inndelingene fra{' '}
           <a
             href="https://www.ssb.no/klass/"
             className="underline hover:text-teal-700 dark:hover:text-teal-400"
@@ -320,6 +322,24 @@ function Workspace({
     downloadBlob(exportResult.blob, filename)
   }
 
+  // The attribute table of the export, and one feature's properties at the
+  // same level so the columns can be explored before anything is selected.
+  const dataRows = useMemo(
+    () => exportTarget.features.features.map((f) => f.properties as Record<string, string>),
+    [exportTarget],
+  )
+  const dataExample = (() => {
+    const objectName =
+      effectiveGranularity === 'fylker' || effectiveGranularity === 'kommuner' || effectiveGranularity === 'bydeler'
+        ? effectiveGranularity
+        : DISTRIKT_KINDS[effectiveGranularity].objects.med
+    return topology.objects[objectName].geometries[0]?.properties as Record<string, string> | undefined
+  })()
+
+  function handleDownloadCsv(columns: string[]) {
+    downloadBlob(buildCsv(columns, dataRows), `${filenameStem ?? effectiveGranularity}.csv`)
+  }
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Left column: selection steps */}
@@ -391,6 +411,16 @@ function Workspace({
           extension={exportResult?.extension ?? null}
           granularity={effectiveGranularity}
           featureCount={exportTarget.features.features.length}
+        />
+      </div>
+
+      {/* Full width: the attribute table behind the download */}
+      <div className="lg:col-span-2">
+        <DataTabell
+          granularity={effectiveGranularity}
+          rows={dataRows}
+          example={dataExample}
+          onDownloadCsv={handleDownloadCsv}
         />
       </div>
     </div>

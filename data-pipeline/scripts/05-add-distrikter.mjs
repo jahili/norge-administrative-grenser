@@ -1,6 +1,11 @@
 // Adds district divisions — politidistrikter, 110-distrikter, valgdistrikter,
-// økonomiske regioner, landsdeler and helseregioner — to the bundled topology
-// in src/assets/norge-grenser.topojson.
+// økonomiske regioner, landsdeler, helseregioner, familievern- and
+// barnevernsregioner, reiselivsregioner, samiske valgkretser and sentralitet —
+// to the bundled topology in src/assets/norge-grenser.topojson.
+//
+// Sentralitet is a grouping of kommuner by SSB's centrality index rather than
+// a geographic region, so its "districts" are not contiguous; it is merged the
+// same way.
 //
 // Every division is made up of whole kommuner, so instead of shipping their
 // own geometry we:
@@ -106,6 +111,41 @@ const DISTRIKTER = [
     sortBy: 'navn',
     source: { type: 'ssb-kommune', classificationId: 105 },
   },
+  {
+    kind: 'familievernregioner',
+    idField: 'familievernregionnummer',
+    nameField: 'familievernregionnavn',
+    sortBy: 'nummer',
+    source: { type: 'ssb-kommune', classificationId: 557 },
+  },
+  {
+    kind: 'barnevernsregioner',
+    idField: 'barnevernsregionnummer',
+    nameField: 'barnevernsregionnavn',
+    sortBy: 'nummer',
+    source: { type: 'ssb-kommune', classificationId: 563 },
+  },
+  {
+    kind: 'reiselivsregioner',
+    idField: 'reiselivsregionnummer',
+    nameField: 'reiselivsregionnavn',
+    sortBy: 'nummer',
+    source: { type: 'ssb-kommune', classificationId: 527 },
+  },
+  {
+    kind: 'samiskeValgkretser',
+    idField: 'samiskvalgkretsnummer',
+    nameField: 'samiskvalgkretsnavn',
+    sortBy: 'nummer',
+    source: { type: 'ssb-kommune', classificationId: 581 },
+  },
+  {
+    kind: 'sentralitet',
+    idField: 'sentralitetnummer',
+    nameField: 'sentralitetnavn',
+    sortBy: 'nummer',
+    source: { type: 'ssb-kommune', classificationId: 128 },
+  },
 ]
 
 await mkdir(rawDir, { recursive: true })
@@ -128,10 +168,14 @@ for (const distrikt of DISTRIKTER) {
   assignments.push({ distrikt, byKommune: await assign(distrikt) })
 }
 
+// Replace the district fields (from any earlier run), keeping the kommune's own.
+const distriktFields = new Set(DISTRIKTER.flatMap((d) => [d.idField, d.nameField]))
 for (const layer of Object.values(kommuneLayers)) {
   for (const geometry of layer.geometries) {
-    const { kommunenummer, kommunenavn, fylkesnummer, fylkesnavn } = geometry.properties
-    geometry.properties = { kommunenummer, kommunenavn, fylkesnummer, fylkesnavn }
+    const { kommunenummer } = geometry.properties
+    geometry.properties = Object.fromEntries(
+      Object.entries(geometry.properties).filter(([field]) => !distriktFields.has(field)),
+    )
     for (const { distrikt, byKommune } of assignments) {
       const { id, navn } = byKommune.get(kommunenummer)
       geometry.properties[distrikt.idField] = id

@@ -12,6 +12,8 @@ interface DistriktKindInfo {
   artikkel: 'ett' | 'én'
   /** Where the division comes from, shown next to the list. */
   kilde: string
+  /** Where its codes are documented: the SSB KLASS classification, or another source. */
+  kildeUrl: string
   /** Property names on district features and on kommuner, as written by data:distrikter. */
   idField: string
   nameField: string
@@ -19,6 +21,9 @@ interface DistriktKindInfo {
   filnavnSuffiks?: string
   /** List the districts under their fylke (only for divisions that nest within fylker). */
   listeEtterFylke?: boolean
+  /** A grouping of kommuner by a property rather than a geographic region, so its
+   *  "districts" are not contiguous areas (e.g. sentralitet). */
+  ikkeSammenhengende?: boolean
   /** Bundled topology objects with and without havgrense. */
   objects: { med: DistriktKind; uten: `${DistriktKind}UtenHavgrense` }
 }
@@ -31,6 +36,7 @@ export const DISTRIKT_KINDS: Record<DistriktKind, DistriktKindInfo> = {
     flertall: 'politidistrikter',
     artikkel: 'ett',
     kilde: 'SSB, Standard for politidistrikt',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/109',
     idField: 'politidistriktnummer',
     nameField: 'politidistriktnavn',
     filnavnSuffiks: 'politidistrikt',
@@ -42,6 +48,7 @@ export const DISTRIKT_KINDS: Record<DistriktKind, DistriktKindInfo> = {
     flertall: '110-distrikter',
     artikkel: 'ett',
     kilde: 'DSB, Brannalarmsentraler',
+    kildeUrl: 'https://kartkatalog.geonorge.no/metadata/c4436a5f-1e22-461a-8209-786f7052acb5',
     idField: 'distrikt110id',
     nameField: 'distrikt110navn',
     objects: { med: 'distrikter110', uten: 'distrikter110UtenHavgrense' },
@@ -52,6 +59,7 @@ export const DISTRIKT_KINDS: Record<DistriktKind, DistriktKindInfo> = {
     flertall: 'valgdistrikter',
     artikkel: 'ett',
     kilde: 'SSB, Standard for valgdistrikt (stortingsvalg)',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/543',
     idField: 'valgdistriktnummer',
     nameField: 'valgdistriktnavn',
     objects: { med: 'valgdistrikter', uten: 'valgdistrikterUtenHavgrense' },
@@ -62,6 +70,7 @@ export const DISTRIKT_KINDS: Record<DistriktKind, DistriktKindInfo> = {
     flertall: 'økonomiske regioner',
     artikkel: 'én',
     kilde: 'SSB, Standard for økonomiske regioner',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/108',
     idField: 'okonomiskregionnummer',
     nameField: 'okonomiskregionnavn',
     filnavnSuffiks: 'økonomisk region',
@@ -74,6 +83,7 @@ export const DISTRIKT_KINDS: Record<DistriktKind, DistriktKindInfo> = {
     flertall: 'landsdeler',
     artikkel: 'én',
     kilde: 'SSB, Standard for landsdelsinndeling (via fylkene)',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/106',
     idField: 'landsdelnummer',
     nameField: 'landsdelnavn',
     filnavnSuffiks: 'landsdel',
@@ -85,9 +95,70 @@ export const DISTRIKT_KINDS: Record<DistriktKind, DistriktKindInfo> = {
     flertall: 'helseregioner',
     artikkel: 'én',
     kilde: 'SSB, Standard for helseregioner (kommunekobling fra 2020, oversatt til dagens kommunenumre)',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/105',
     idField: 'helseregionnummer',
     nameField: 'helseregionnavn',
     objects: { med: 'helseregioner', uten: 'helseregionerUtenHavgrense' },
+  },
+  familievernregioner: {
+    tittel: 'Familievernregioner',
+    entall: 'familievernregion',
+    flertall: 'familievernregioner',
+    artikkel: 'én',
+    kilde: 'SSB, Standard for familievernregioner (Bufetat)',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/557',
+    idField: 'familievernregionnummer',
+    nameField: 'familievernregionnavn',
+    filnavnSuffiks: 'familievernregion',
+    objects: { med: 'familievernregioner', uten: 'familievernregionerUtenHavgrense' },
+  },
+  barnevernsregioner: {
+    tittel: 'Barnevernsregioner',
+    entall: 'barnevernsregion',
+    flertall: 'barnevernsregioner',
+    artikkel: 'én',
+    kilde: 'SSB, Standard for barnevernsregioner (Bufetat, med Oslo som egen region)',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/563',
+    idField: 'barnevernsregionnummer',
+    nameField: 'barnevernsregionnavn',
+    filnavnSuffiks: 'barnevernsregion',
+    objects: { med: 'barnevernsregioner', uten: 'barnevernsregionerUtenHavgrense' },
+  },
+  reiselivsregioner: {
+    tittel: 'Reiselivsregioner',
+    entall: 'reiselivsregion',
+    flertall: 'reiselivsregioner',
+    artikkel: 'én',
+    kilde: 'SSB, Standard for reiselivsregioner',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/527',
+    idField: 'reiselivsregionnummer',
+    nameField: 'reiselivsregionnavn',
+    filnavnSuffiks: 'reiselivsregion',
+    listeEtterFylke: true,
+    objects: { med: 'reiselivsregioner', uten: 'reiselivsregionerUtenHavgrense' },
+  },
+  samiskeValgkretser: {
+    tittel: 'Samiske valgkretser',
+    entall: 'samisk valgkrets',
+    flertall: 'samiske valgkretser',
+    artikkel: 'én',
+    kilde: 'SSB, Standard for samiske valgkretser (sametingsvalg)',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/581',
+    idField: 'samiskvalgkretsnummer',
+    nameField: 'samiskvalgkretsnavn',
+    objects: { med: 'samiskeValgkretser', uten: 'samiskeValgkretserUtenHavgrense' },
+  },
+  sentralitet: {
+    tittel: 'Sentralitet',
+    entall: 'sentralitetsgruppe',
+    flertall: 'sentralitetsgrupper',
+    artikkel: 'én',
+    kilde: 'SSB, Standard for sentralitet (2020). Gruppene er ikke sammenhengende områder, men alle kommuner med samme sentralitet',
+    kildeUrl: 'https://www.ssb.no/klass/klassifikasjoner/128',
+    idField: 'sentralitetnummer',
+    nameField: 'sentralitetnavn',
+    ikkeSammenhengende: true,
+    objects: { med: 'sentralitet', uten: 'sentralitetUtenHavgrense' },
   },
 }
 

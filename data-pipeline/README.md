@@ -14,11 +14,11 @@ Dette kjører, i rekkefølge:
 
 | Steg | Script | Hva det gjør |
 | --- | --- | --- |
-| 1 | `data:download` | Laster ned kommune- og fylkedatasettene fra Geonorge (`data-pipeline/raw/`) |
+| 1 | `data:download` | Laster ned kommune- og fylkedatasettene fra Geonorge, og SSBs navneendringer etter Geonorges uttrekk (`data-pipeline/raw/`) |
 | 2 | `data:normalize` | Renser bort alle felter unntatt `kommunenummer`, `kommunenavn`, `fylkesnummer`, `fylkesnavn` (`data-pipeline/work/`) |
 | 3 | `data:topology` | Slår sammen til delt topologi, forenkler geometrien til ~5 % og skriver TopoJSON med presimplifiseringsdata |
 | 4 | `data:copy` | Kopierer resultatet til `src/assets/norge-grenser.topojson` |
-| 5 | `data:distrikter` | Merker kommunene med politidistrikt, valgdistrikt, økonomisk region, landsdel og helseregion (SSB) og 110-distrikt (DSB), og legger til distriktlag slått sammen av kommunene, direkte i `src/assets/norge-grenser.topojson` |
+| 5 | `data:distrikter` | Merker kommunene med distriktene sine i elleve inndelinger (SSB, og DSB for 110), og legger til distriktlag slått sammen av kommunene, direkte i `src/assets/norge-grenser.topojson` |
 
 `data-pipeline/raw/` og `data-pipeline/work/` er mellomlagre (gitignored —
 se `.gitignore`) og kan trygt slettes; de bygges på nytt neste gang pipelinen
@@ -35,11 +35,17 @@ kjøres.
   slutter å tilby direkte nedlasting, er det dokumentert en fallback til
   Kartverkets WFS i `scripts/01-download.mjs` (krever da en GML→GeoJSON-
   konvertering, f.eks. via `ogr2ogr`, siden WFS-tjenesten kun returnerer GML).
-- **Navnenormalisering**: Geonorges `fylkesnavn` er noen ganger en
-  bindestrek-separert liste over offisielle navn på flere språk
-  (f.eks. «Troms - Romsa - Tromssa»). Vi bruker i stedet det primære norske
-  navnet fra `administrativenhetnavn`-feltet — vesentlig triveligere i lister,
-  filnavn og på kartet.
+- **Navnenormalisering**: 22 kommuner og 5 fylker har offisielle navn på flere
+  språk (f.eks. «Guovdageaidnu - Kautokeino», «Troms - Romsa - Tromssa»).
+  `kommunenavn`/`fylkesnavn` er det norske navnet fra
+  `administrativenhetnavn`-feltet — triveligere i lister, filnavn og på
+  kartet — mens `kommunenavnOffisielt`/`fylkesnavnOffisielt` har det fulle
+  offisielle navnet med samiske og kvenske navn, i offisiell rekkefølge.
+  Kartverkets uttrekk kan henge etter navneendringer (Oslo ble «Oslo - Oslove»
+  1.1.2026, men uttrekket fra 10.12.2025 sier «Oslo»). Steg 1 henter derfor
+  SSBs navn per uttrekksdato og per i dag, og der SSB-navnet har endret seg
+  etter uttrekket og Kartverket fortsatt har det gamle, bruker steg 2 SSBs nye
+  navn som offisielt navn. Når Kartverket oppdaterer, slutter dette av seg selv.
 - **Forenkling og delt topologi**: Fylke- og kommunelagene importeres sammen
   («combine-files») slik at mapshaper bygger delt topologi — sammenfallende
   grenser får identiske koordinater. Forenkling av denne delte topologien
@@ -62,8 +68,10 @@ kjøres.
   bygges med `topojson-client`s `mergeArcs`. Inndelingene er listet i
   `DISTRIKTER` i skriptet: SSB-inndelinger med koblingstabell mot
   kommuneinndelingen (politidistrikt 109, valgdistrikt 543, økonomiske regioner
-  108, helseregioner 105) eller fylkesinndelingen (landsdeler 106), og DSBs
-  110-distrikter. Er SSB-tabellen eldre enn dagens kommunenumre (helseregionene
+  108, helseregioner 105, familievern 557, barnevern 563, reiseliv 527, samiske
+  valgkretser 581, sentralitet 128) eller fylkesinndelingen (landsdeler 106),
+  og DSBs 110-distrikter. Sentralitet er en gruppering etter sentralitetsindeks,
+  ikke geografiske regioner, så «distriktene» der er ikke sammenhengende. Er SSB-tabellen eldre enn dagens kommunenumre (helseregionene
   har bare tabell mot Kommuneinndeling 2020), oversettes kommunekodene med SSBs
   liste over kommuneendringer. De
   refererer dermed bare til kommunelagenes eksisterende buer: grensene sammenfaller

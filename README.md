@@ -1,8 +1,8 @@
 # Norge – administrative grenser
 
 En web-app for å velge norske **fylker, kommuner og bydeler** — eller kommuner gruppert etter
-**politidistrikter, 110-distrikter, valgdistrikter, økonomiske regioner, landsdeler og
-helseregioner** — på et kart og laste dem ned
+**politidistrikter, valgdistrikter, helseregioner og åtte andre inndelinger** — på et kart og
+laste dem ned
 som GeoJSON eller TopoJSON — klare til bruk i Power BI, QGIS, Leaflet, D3 eller andre
 kart- og analyseverktøy.
 
@@ -13,8 +13,9 @@ kart- og analyseverktøy.
 - Velge ett eller flere **fylker**, deretter **kommuner**, og for seks byer også **bydeler**
   (Bergen, Fredrikstad, Kristiansand, Oslo, Stavanger og Trondheim)
 - Gruppere etter **politidistrikter**, **110-distrikter**, **valgdistrikter**, **økonomiske
-  regioner**, **landsdeler** eller **helseregioner** i stedet for fylker — og velge kommuner og
-  bydeler innenfor dem på samme måte
+  regioner**, **landsdeler**, **helseregioner**, **familievernregioner**, **barnevernsregioner**,
+  **reiselivsregioner**, **samiske valgkretser** eller **sentralitet** i stedet for fylker — og
+  velge kommuner og bydeler innenfor dem på samme måte
 - Se utvalget på et kart før du laster ned
 - Velge om grensene skal **følge kystlinjen** eller strekke seg ut til
   **territorialgrensen i havet** («havgrensen»)
@@ -52,8 +53,8 @@ Alt skjer i nettleseren — ingen data sendes til noen server.
 
 ### Arkitektur
 
-Appen laster én ferdigbygd TopoJSON-fil (~4,5 MB) med 17 lag som deler samme
-buesett (arcs):
+Appen laster én ferdigbygd TopoJSON-fil (~5,6 MB, ~1,8 MB komprimert) med 27 lag som
+deler samme buesett (arcs):
 
 | Lag | Innhold |
 | --- | --- |
@@ -68,12 +69,17 @@ buesett (arcs):
 | `okonomiskeRegioner` / `…UtenHavgrense` | 85 økonomiske regioner |
 | `landsdeler` / `…UtenHavgrense` | 6 landsdeler |
 | `helseregioner` / `…UtenHavgrense` | 4 helseregioner |
+| `familievernregioner` / `…UtenHavgrense` | 5 familievernregioner (Bufetat) |
+| `barnevernsregioner` / `…UtenHavgrense` | 6 barnevernsregioner (Bufetat, Oslo egen region) |
+| `reiselivsregioner` / `…UtenHavgrense` | 65 reiselivsregioner |
+| `samiskeValgkretser` / `…UtenHavgrense` | 7 samiske valgkretser (sametingsvalg) |
+| `sentralitet` / `…UtenHavgrense` | 6 sentralitetsgrupper — ikke sammenhengende områder, men alle kommuner med samme sentralitet |
 
 Distriktlagene er satt sammen av kommunene. Kommunelagene har i tillegg et nummer- og
 navnefelt per inndeling (`politidistriktnummer`/`politidistriktnavn`, `distrikt110id`/`distrikt110navn`,
 `valgdistriktnummer`/`valgdistriktnavn`, `okonomiskregionnummer`/`okonomiskregionnavn`,
-`landsdelnummer`/`landsdelnavn`, `helseregionnummer`/`helseregionnavn`), så en kommuneeksport
-viser hvilke distrikter hver kommune hører til.
+`landsdelnummer`/`landsdelnavn`, `helseregionnummer`/`helseregionnavn` osv., se `DISTRIKT_KINDS`
+i `src/lib/distrikter.ts`), så en kommuneeksport viser hvilke distrikter hver kommune hører til.
 
 Topologien er forhåndsprosessert med `presimplify`, slik at detaljnivå-slideren kan
 forenkle geometrien direkte i nettleseren uten ny nedlasting. Ved nedlasting bygges en
@@ -100,7 +106,9 @@ beskrevet i én liste (`DISTRIKTER`) i skriptet; en ny SSB-inndeling er én oppf
 én i `src/lib/distrikter.ts`. Steget feiler hvis en kommune mangler distrikt, ligger i flere,
 eller (for 110) ikke ligger minst 98 % i ett DSB-distrikt.
 
-Normaliseringen håndterer at bydel-kildene har ulike skjemaer (bl.a. syntetiske
+Kommuner og fylker har både norsk navn (`kommunenavn`/`fylkesnavn`) og fullt offisielt navn med
+samiske og kvenske navn (`kommunenavnOffisielt`/`fylkesnavnOffisielt`, f.eks.
+«Guovdageaidnu - Kautokeino»). Normaliseringen håndterer også at bydel-kildene har ulike skjemaer (bl.a. syntetiske
 bydelsnumre for Fredrikstad og sammenslåing av Oslos to Marka-polygoner), og gir alle
 bydeler et felles skjema: `bydelnummer`, `bydelnavn`, `kommunenummer`.
 
@@ -124,11 +132,15 @@ Grunnlagsdataene er samlet i [Kart-fylker-og-kommuner-json](https://github.com/j
 - **Bydeler i Fredrikstad:** [Kartverket](https://kartkatalog.geonorge.no/)
 - **Bydeler i Oslo:** Oslo kommune
 - **Bydeler/delområder i Bergen, Stavanger, Trondheim og Kristiansand:** [SSB](https://kart.ssb.no/)
-- **Politidistrikter, valgdistrikter, økonomiske regioner og helseregioner:** SSBs klassifikasjoner
+- **Politidistrikter, valgdistrikter, økonomiske regioner, helseregioner, familievern- og
+  barnevernsregioner, reiselivsregioner, samiske valgkretser og sentralitet:** SSBs klassifikasjoner
   [109](https://www.ssb.no/klass/klassifikasjoner/109), [543](https://www.ssb.no/klass/klassifikasjoner/543),
-  [108](https://www.ssb.no/klass/klassifikasjoner/108) og [105](https://www.ssb.no/klass/klassifikasjoner/105)
-  (koblingstabeller mot kommuneinndelingen; helseregionenes tabell er fra 2020 og oversettes til dagens
-  kommunenumre med SSBs liste over kommuneendringer)
+  [108](https://www.ssb.no/klass/klassifikasjoner/108), [105](https://www.ssb.no/klass/klassifikasjoner/105),
+  [557](https://www.ssb.no/klass/klassifikasjoner/557), [563](https://www.ssb.no/klass/klassifikasjoner/563),
+  [527](https://www.ssb.no/klass/klassifikasjoner/527), [581](https://www.ssb.no/klass/klassifikasjoner/581) og
+  [128](https://www.ssb.no/klass/klassifikasjoner/128) (koblingstabeller mot kommuneinndelingen;
+  helseregionenes tabell er fra 2020 og oversettes til dagens kommunenumre med SSBs liste over
+  kommuneendringer)
 - **Landsdeler:** [SSB, Standard for landsdelsinndeling](https://www.ssb.no/klass/klassifikasjoner/106)
   (koblingstabell mot fylkesinndelingen)
 - **110-distrikter:** [DSB, Brannalarmsentraler](https://kartkatalog.geonorge.no/metadata/c4436a5f-1e22-461a-8209-786f7052acb5)

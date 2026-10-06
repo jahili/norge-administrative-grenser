@@ -26,8 +26,15 @@ export function InndelingToggle({ inndeling, onChange }: InndelingToggleProps) {
         className="mt-2 w-full rounded-xs border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus-visible:outline-teal-400"
       >
         <option value="administrativ">Fylker (med kommuner og bydeler)</option>
-        <optgroup label="Andre inndelinger av hele kommuner">
-          {DISTRIKT_KIND_LIST.map((kind) => (
+        <optgroup label="Andre regioninndelinger">
+          {DISTRIKT_KIND_LIST.filter((kind) => !DISTRIKT_KINDS[kind].ikkeSammenhengende).map((kind) => (
+            <option key={kind} value={kind}>
+              {DISTRIKT_KINDS[kind].tittel}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Kommunegrupperinger">
+          {DISTRIKT_KIND_LIST.filter((kind) => DISTRIKT_KINDS[kind].ikkeSammenhengende).map((kind) => (
             <option key={kind} value={kind}>
               {DISTRIKT_KINDS[kind].tittel}
             </option>

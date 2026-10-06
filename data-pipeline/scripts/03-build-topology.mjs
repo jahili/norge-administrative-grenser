@@ -70,7 +70,8 @@ await mkdir(workDir, { recursive: true })
 // `kommuner-uten-havgrense` and `bydeler`, renamed to the camelCase TopoJSON
 // object names the app expects. The two fylke layers are then derived by
 // dissolving each kommune layer on `fylkesnummer` (keeping `fylkesnavn`) into a
-// new layer — done before `-simplify` so fylke and kommune borders share arcs.
+// new layer (also keeping `fylkesnavnOffisielt`) — done before `-simplify` so
+// fylke and kommune borders share arcs.
 // `target=*` on the later commands keeps every layer in scope after the
 // dissolves change the active target.
 const args = [
@@ -83,13 +84,13 @@ const args = [
   'kommuner,kommunerUtenHavgrense,bydeler',
   '-dissolve',
   'fylkesnummer',
-  'copy-fields=fylkesnavn',
+  'copy-fields=fylkesnavn,fylkesnavnOffisielt',
   '+',
   'name=fylker',
   'target=kommuner',
   '-dissolve',
   'fylkesnummer',
-  'copy-fields=fylkesnavn',
+  'copy-fields=fylkesnavn,fylkesnavnOffisielt',
   '+',
   'name=fylkerUtenHavgrense',
   'target=kommunerUtenHavgrense',
