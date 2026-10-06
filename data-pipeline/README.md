@@ -2,7 +2,7 @@
 
 Bygger `src/assets/norge-grenser.topojson`, den eneste geografiske datafilen
 appen bruker. Alt skjer offline mot ferdig nedlastede filer — appen selv gjør
-ingen kall til Geonorge eller andre API-er.
+ingen kall til Geonorge, SSB, DSB eller andre API-er.
 
 ## Kjøre hele pipelinen
 
@@ -18,6 +18,7 @@ Dette kjører, i rekkefølge:
 | 2 | `data:normalize` | Renser bort alle felter unntatt `kommunenummer`, `kommunenavn`, `fylkesnummer`, `fylkesnavn` (`data-pipeline/work/`) |
 | 3 | `data:topology` | Slår sammen til delt topologi, forenkler geometrien til ~5 % og skriver TopoJSON med presimplifiseringsdata |
 | 4 | `data:copy` | Kopierer resultatet til `src/assets/norge-grenser.topojson` |
+| 5 | `data:distrikter` | Merker kommunene med politidistrikt (SSB) og 110-distrikt (DSB), og legger til distriktlag slått sammen av kommunene, direkte i `src/assets/norge-grenser.topojson` |
 
 `data-pipeline/raw/` og `data-pipeline/work/` er mellomlagre (gitignored —
 se `.gitignore`) og kan trygt slettes; de bygges på nytt neste gang pipelinen
@@ -56,6 +57,20 @@ kjøres.
   i samme steg som forenklingen — og gjenbruker topologien som allerede er
   bygget, som gir et ryddigere resultat enn å bygge topologi på nytt fra to
   uavhengig prosesserte filer. `geo2topo` er derfor ikke lenger en avhengighet.
+- **Politidistrikter og 110-distrikter (steg 5)**: Begge består av hele
+  kommuner, så i stedet for egen geometri merkes hver kommune med distriktet
+  sitt, og distriktlagene bygges med `topojson-client`s `mergeArcs`. De
+  refererer dermed bare til kommunelagenes eksisterende buer: grensene sammenfaller
+  nøyaktig, havgrense-valget virker automatisk, og filen vokser lite.
+  Politidistrikt hentes fra SSBs nyeste koblingstabell mellom klassifikasjon 109
+  og kommuneinndelingen. SSBs 110-klassifikasjon (427) er fra 2019 og har ingen
+  kommunekobling, så 110-distriktene hentes fra DSBs Brannalarmsentraler-WFS og
+  kommunene tilordnes etter arealoverlapp. Steget feiler heller enn å gjette hvis
+  en kommune ikke ligger minst 98 % i ett distrikt.
+  To fallgruver: `mergeArcs` kjøres mot en 2D-kopi av buene, fordi den ellers
+  sammenligner endepunkter med og uten presimplify-vekten og aldri får lukket
+  ringene. Og steget skriver rett i `src/assets/`-filen og er idempotent, så det
+  kan kjøres alene uten å bygge geometrien på nytt.
 - **Geonorges filformat**: Filene publisert fra juli 2026 har nye filnavn i
   zip-arkivene (`…_Fylker_…` i stedet for `…_Fylke_…`), er en vanlig
   FeatureCollection i stedet for å ligge under en `Fylke`-nøkkel, og blander

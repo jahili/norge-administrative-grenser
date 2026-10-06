@@ -5,9 +5,11 @@ import type { NorwayTopologyType } from './hooks/useTopology'
 import { useSelection } from './hooks/useSelection'
 import { useSimplifiedTopology } from './hooks/useSimplifiedTopology'
 import { useTheme } from './hooks/useTheme'
-import { FylkeSelector } from './components/FylkeSelector'
+import { GruppeSelector } from './components/GruppeSelector'
 import { KommuneSelector } from './components/KommuneSelector'
 import { BydelSelector } from './components/BydelSelector'
+import { InndelingToggle } from './components/InndelingToggle'
+import type { Inndeling } from './components/InndelingToggle'
 import { HavgrenseToggle } from './components/HavgrenseToggle'
 import { MapPreview } from './components/MapPreview'
 import { SimplificationControl } from './components/SimplificationControl'
@@ -16,6 +18,7 @@ import { ThemeToggle } from './components/ThemeToggle'
 import {
   selectedFeatureCollection,
   selectedBydelFeatureCollection,
+  selectedDistriktFeatureCollection,
   buildExport,
   downloadBlob,
 } from './lib/exportData'
@@ -23,13 +26,19 @@ import {
   selectionFilenameStem,
   fylkeSelectionFilenameStem,
   bydelSelectionFilenameStem,
+  distriktSelectionFilenameStem,
 } from './lib/filename'
+import { DISTRIKT_KINDS, toDistrikt } from './lib/distrikter'
+import type { DistriktProperties } from './lib/distrikter'
 import type {
   ExportFormat,
   ExportGranularity,
   AreaGeometry,
   BydelProperties,
+  DistriktKind,
   FylkeProperties,
+  GruppeKind,
+  KommuneGruppe,
   KommuneProperties,
 } from './lib/types'
 import type { FeatureCollection } from 'geojson'
@@ -57,7 +66,8 @@ function App() {
         </h1>
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
           Her kan du finne og laste ned kartdata for norske administrative grenser. Velg mellom
-          fylker, kommuner og bydeler, og last ned grensene i GeoJSON- eller TopoJSON-format.
+          fylker, kommuner og bydeler, eller politidistrikter og 110-distrikter, og last ned
+          grensene i GeoJSON- eller TopoJSON-format.
         </p>
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
           Appen gjør det enkelt å hente ut kartgrunnlag til analyser, visualiseringer og webkart
@@ -74,7 +84,7 @@ function App() {
           <div className="flex items-center gap-3 py-10">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700 dark:border-slate-700 dark:border-t-teal-400" />
             <p role="status" className="text-slate-600 dark:text-slate-400">
-              Laster inn kartdata (3,2 MB) …
+              Laster inn kartdata (3,7 MB) …
             </p>
           </div>
         )}
@@ -97,6 +107,24 @@ function App() {
           >
             Kartverket
           </a>
+          . Politidistrikter fra{' '}
+          <a
+            href="https://www.ssb.no/klass/klassifikasjoner/109"
+            className="underline hover:text-teal-700 dark:hover:text-teal-400"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            SSB
+          </a>{' '}
+          og 110-distrikter fra{' '}
+          <a
+            href="https://kartkatalog.geonorge.no/metadata/c4436a5f-1e22-461a-8209-786f7052acb5"
+            className="underline hover:text-teal-700 dark:hover:text-teal-400"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            DSB
+          </a>
           . Bydelsdata tilgjengelig for Bergen, Fredrikstad, Kristiansand, Oslo, Stavanger og
           Trondheim — kommuner med bydeler er merket med{' '}
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-teal-600 align-middle dark:bg-teal-400" /> i
@@ -113,14 +141,40 @@ interface WorkspaceProps {
   kommuner: KommuneProperties[]
   kommunerByFylke: Map<string, KommuneProperties[]>
   bydelsByKommune: Map<string, BydelProperties[]>
+  distrikter: Record<DistriktKind, KommuneGruppe[]>
+  kommunerByDistrikt: Record<DistriktKind, Map<string, KommuneProperties[]>>
   theme: 'light' | 'dark'
 }
 
-function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommune, theme }: WorkspaceProps) {
-  const selection = useSelection(fylker, kommunerByFylke, bydelsByKommune)
+function Workspace({
+  topology,
+  fylker,
+  kommuner,
+  kommunerByFylke,
+  bydelsByKommune,
+  distrikter,
+  kommunerByDistrikt,
+  theme,
+}: WorkspaceProps) {
   const [detailPercent, setDetailPercent] = useState(100)
   const [format, setFormat] = useState<ExportFormat>('geojson')
   const [medHavgrense, setMedHavgrense] = useState(false)
+  const [inndeling, setInndeling] = useState<Inndeling>('administrativ')
+
+  // Kommuner are grouped by fylke or by one of the district kinds. Each
+  // grouping keeps its own selection, so switching inndeling back and forth
+  // doesn't lose anything.
+  const fylkeGrupper = useMemo(() => fylker.map((f) => ({ id: f.fylkesnummer, navn: f.fylkesnavn })), [fylker])
+  const selections = {
+    fylker: useSelection(fylkeGrupper, kommunerByFylke, bydelsByKommune),
+    politidistrikter: useSelection(distrikter.politidistrikter, kommunerByDistrikt.politidistrikter, bydelsByKommune),
+    distrikter110: useSelection(distrikter.distrikter110, kommunerByDistrikt.distrikter110, bydelsByKommune),
+  }
+  const gruppeKind: GruppeKind = inndeling === 'administrativ' ? 'fylker' : inndeling
+  const selection = selections[gruppeKind]
+  const groups = gruppeKind === 'fylker' ? fylkeGrupper : distrikter[gruppeKind]
+  const kommunerByGroup = gruppeKind === 'fylker' ? kommunerByFylke : kommunerByDistrikt[gruppeKind]
+  const gruppeFlertall = gruppeKind === 'fylker' ? 'fylker' : DISTRIKT_KINDS[gruppeKind].flertall
 
   const simplifiedTopology = useSimplifiedTopology(topology, detailPercent)
 
@@ -132,16 +186,29 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
     [simplifiedTopology, kommuneObject, selection.selectedKommuner],
   )
 
-  const contextFylker = useMemo<FeatureCollection<AreaGeometry, FylkeProperties>>(() => {
+  // The selected groups as areas: fylker, or the chosen district kind.
+  const contextAreas = useMemo<
+    | { kind: 'fylker'; features: FeatureCollection<AreaGeometry, FylkeProperties> }
+    | { kind: DistriktKind; features: FeatureCollection<AreaGeometry, DistriktProperties> }
+  >(() => {
+    if (gruppeKind !== 'fylker') {
+      return {
+        kind: gruppeKind,
+        features: selectedDistriktFeatureCollection(simplifiedTopology, gruppeKind, medHavgrense, selection.selectedGroups),
+      }
+    }
     const all = topojsonClient.feature(simplifiedTopology, simplifiedTopology.objects[fylkeObject]) as FeatureCollection<
       AreaGeometry,
       FylkeProperties
     >
     return {
-      type: 'FeatureCollection',
-      features: all.features.filter((f) => selection.selectedFylker.has(f.properties.fylkesnummer)),
+      kind: 'fylker',
+      features: {
+        type: 'FeatureCollection',
+        features: all.features.filter((f) => selection.selectedGroups.has(f.properties.fylkesnummer)),
+      },
     }
-  }, [simplifiedTopology, fylkeObject, selection.selectedFylker])
+  }, [simplifiedTopology, gruppeKind, medHavgrense, fylkeObject, selection.selectedGroups])
 
   const selectedBydelFeatures = useMemo(
     () => selectedBydelFeatureCollection(simplifiedTopology, selection.selectedBydeler),
@@ -161,19 +228,22 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
   const effectiveGranularity: ExportGranularity = (() => {
     if (selection.selectedBydeler.size > 0) return 'bydeler'
     if (selection.selectedKommuner.size > 0) return 'kommuner'
-    if (selection.selectedFylker.size > 0) return 'fylker'
-    return 'kommuner'
+    if (selection.selectedGroups.size > 0) return gruppeKind
+    return gruppeKind === 'fylker' ? 'kommuner' : gruppeKind
   })()
 
   const exportTarget = useMemo<
     | { granularity: 'fylker'; features: FeatureCollection<AreaGeometry, FylkeProperties> }
     | { granularity: 'kommuner'; features: FeatureCollection<AreaGeometry, KommuneProperties> }
     | { granularity: 'bydeler'; features: FeatureCollection<AreaGeometry, BydelProperties> }
+    | { granularity: DistriktKind; features: FeatureCollection<AreaGeometry, DistriktProperties> }
   >(() => {
-    if (effectiveGranularity === 'fylker') return { granularity: 'fylker', features: contextFylker }
     if (effectiveGranularity === 'bydeler') return { granularity: 'bydeler', features: selectedBydelFeatures }
-    return { granularity: 'kommuner', features: selectedFeatures }
-  }, [effectiveGranularity, contextFylker, selectedBydelFeatures, selectedFeatures])
+    if (effectiveGranularity === 'kommuner') return { granularity: 'kommuner', features: selectedFeatures }
+    return contextAreas.kind === 'fylker'
+      ? { granularity: 'fylker', features: contextAreas.features }
+      : { granularity: contextAreas.kind, features: contextAreas.features }
+  }, [effectiveGranularity, contextAreas, selectedBydelFeatures, selectedFeatures])
 
   const exportResult = useMemo(
     () =>
@@ -185,27 +255,42 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
 
   const filenameStem = useMemo(() => {
     if (exportTarget.features.features.length === 0) return null
-    if (exportTarget.granularity === 'fylker') {
-      return fylkeSelectionFilenameStem(exportTarget.features.features.map((f) => f.properties))
+    switch (exportTarget.granularity) {
+      case 'fylker':
+        return fylkeSelectionFilenameStem(exportTarget.features.features.map((f) => f.properties))
+      case 'bydeler':
+        return bydelSelectionFilenameStem(
+          exportTarget.features.features.map((f) => f.properties),
+          bydelsByKommune,
+          kommuner,
+        )
+      case 'kommuner':
+        return selectionFilenameStem(
+          exportTarget.features.features.map((f) => f.properties),
+          gruppeKind,
+          groups,
+          kommunerByGroup,
+        )
+      default:
+        return distriktSelectionFilenameStem(
+          exportTarget.granularity,
+          exportTarget.features.features.map((f) => toDistrikt(f.properties)),
+          distrikter[exportTarget.granularity],
+        )
     }
-    if (exportTarget.granularity === 'bydeler') {
-      return bydelSelectionFilenameStem(
-        exportTarget.features.features.map((f) => f.properties),
-        bydelsByKommune,
-        kommuner,
-      )
-    }
-    return selectionFilenameStem(exportTarget.features.features.map((f) => f.properties), fylker, kommunerByFylke)
-  }, [exportTarget, fylker, kommuner, kommunerByFylke, bydelsByKommune])
+  }, [exportTarget, kommuner, bydelsByKommune, gruppeKind, groups, kommunerByGroup, distrikter])
 
-  // Map shows selected bydeler or kommuner with fill; fylker are always
-  // shown as outlines via contextFylker regardless of granularity.
+  // Map shows selected bydeler or kommuner with fill; the selected fylker or
+  // districts are shown as outlines, or filled when they are the export target.
   const previewFeatures = effectiveGranularity === 'bydeler' ? selectedBydelFeatures : selectedFeatures
+  const contextIsTarget = effectiveGranularity === gruppeKind
 
   const previewLabel = (() => {
-    if (effectiveGranularity === 'fylker') {
-      const n = selection.selectedFylker.size
-      return `${n} fylke${n === 1 ? '' : 'r'} valgt.`
+    if (contextIsTarget) {
+      const n = selection.selectedGroups.size
+      if (gruppeKind === 'fylker') return `${n} fylke${n === 1 ? '' : 'r'} valgt.`
+      const { entall, flertall } = DISTRIKT_KINDS[gruppeKind]
+      return n === 0 ? `Ingen ${flertall} valgt ennå.` : `${n} ${n === 1 ? entall : flertall} valgt.`
     }
     if (effectiveGranularity === 'bydeler') {
       const n = selectedBydelFeatures.features.length
@@ -224,10 +309,28 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Left column: selection steps */}
       <div className="flex flex-col gap-6">
-        <FylkeSelector fylker={fylker} selection={selection} />
+        <InndelingToggle inndeling={inndeling} onChange={setInndeling} />
+        <GruppeSelector
+          key={gruppeKind}
+          flertall={gruppeFlertall}
+          groups={groups}
+          selection={selection}
+          note={
+            gruppeKind === 'fylker'
+              ? undefined
+              : `Kilde: ${DISTRIKT_KINDS[gruppeKind].kilde}. ${DISTRIKT_KINDS[gruppeKind].tittel} består av hele kommuner, og grensene er satt sammen av kommunegrensene.`
+          }
+          kommuneCount={
+            gruppeKind === 'fylker'
+              ? undefined
+              : new Map([...kommunerByDistrikt[gruppeKind]].map(([id, list]) => [id, list.length]))
+          }
+        />
         <KommuneSelector
-          fylker={fylker}
-          kommunerByFylke={kommunerByFylke}
+          key={`kommuner-${gruppeKind}`}
+          groups={groups}
+          gruppeFlertall={gruppeFlertall}
+          kommunerByGroup={kommunerByGroup}
           bydelsByKommune={bydelsByKommune}
           selection={selection}
         />
@@ -244,10 +347,10 @@ function Workspace({ topology, fylker, kommuner, kommunerByFylke, bydelsByKommun
           <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Forhåndsvisning</h2>
           <MapPreview
             selectedFeatures={previewFeatures}
-            contextFylker={contextFylker}
+            contextAreas={contextAreas.features}
             detailPercent={detailPercent}
             havgrenseKey={medHavgrense ? 'med' : 'uten'}
-            previewGranularity={effectiveGranularity}
+            contextIsTarget={contextIsTarget}
             theme={theme}
           />
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{previewLabel}</p>

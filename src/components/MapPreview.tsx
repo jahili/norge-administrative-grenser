@@ -3,26 +3,32 @@ import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet'
 import type { Map as LeafletMap } from 'leaflet'
 import type { Feature, FeatureCollection, Position } from 'geojson'
 import type { AreaGeometry, BydelProperties, FylkeProperties, KommuneProperties } from '../lib/types'
-import type { ExportGranularity } from '../lib/types'
+import { toDistrikt } from '../lib/distrikter'
+import type { DistriktProperties } from '../lib/distrikter'
 import type { Theme } from '../hooks/useTheme'
 
 type SelectedProperties = KommuneProperties | BydelProperties
+type ContextProperties = FylkeProperties | DistriktProperties
 
 function featureId(props: SelectedProperties): string {
-  return 'kommunenummer' in props && 'fylkesnummer' in props ? props.kommunenummer : (props as BydelProperties).bydelnummer
+  return 'bydelnummer' in props ? props.bydelnummer : props.kommunenummer
 }
 function featureLabel(props: SelectedProperties): string {
-  return 'kommunenavn' in props ? props.kommunenavn : (props as BydelProperties).bydelnavn
+  return 'bydelnavn' in props ? props.bydelnavn : props.kommunenavn
+}
+function contextLabel(props: ContextProperties): string {
+  return 'fylkesnavn' in props ? props.fylkesnavn : toDistrikt(props).navn
 }
 
 interface MapPreviewProps {
   selectedFeatures: FeatureCollection<AreaGeometry, SelectedProperties>
-  contextFylker: FeatureCollection<AreaGeometry, FylkeProperties>
+  /** The selected fylker or districts that the kommuner are picked from. */
+  contextAreas: FeatureCollection<AreaGeometry, ContextProperties>
   detailPercent: number
   havgrenseKey: string
-  /** Controls how contextFylker is rendered: filled when 'fylker' (the export target),
+  /** Whether contextAreas are what gets exported: filled when they are,
    *  dashed outline when drilling into kommuner/bydeler. */
-  previewGranularity: ExportGranularity
+  contextIsTarget: boolean
   theme: Theme
 }
 
@@ -58,10 +64,10 @@ const CONTEXT_STYLE = {
 
 export function MapPreview({
   selectedFeatures,
-  contextFylker,
+  contextAreas,
   detailPercent,
   havgrenseKey,
-  previewGranularity,
+  contextIsTarget,
   theme,
 }: MapPreviewProps) {
   const mapRef = useRef<LeafletMap | null>(null)
@@ -76,7 +82,7 @@ export function MapPreview({
     if (!map) return
 
     const zoomTarget =
-      selectedFeatures.features.length > 0 ? selectedFeatures : contextFylker
+      selectedFeatures.features.length > 0 ? selectedFeatures : contextAreas
 
     if (zoomTarget.features.length === 0) {
       map.setView(NORWAY_CENTER, NORWAY_ZOOM)
@@ -85,9 +91,9 @@ export function MapPreview({
 
     const bounds = featureCollectionBounds(zoomTarget)
     if (bounds) map.fitBounds(bounds, { padding: [24, 24] })
-  }, [selectedFeatures, contextFylker])
+  }, [selectedFeatures, contextAreas])
 
-  const fylkerKey = `fylker-${contextFylker.features.length}-${detailPercent}-${havgrenseKey}-${previewGranularity}-${theme}`
+  const contextKey = `context-${contextAreas.features.map((f) => contextLabel(f.properties)).join(',')}-${detailPercent}-${havgrenseKey}-${contextIsTarget}-${theme}`
 
   return (
     <div>
@@ -111,20 +117,20 @@ export function MapPreview({
           maxNativeZoom={TILE_MAX_ZOOM}
         />
 
-        {/* Fylke layer: filled when fylker is the export target, dashed outline otherwise */}
-        {previewGranularity === 'fylker' ? (
+        {/* Fylke/district layer: filled when it is the export target, dashed outline otherwise */}
+        {contextIsTarget ? (
           <GeoJSON
-            key={fylkerKey}
-            data={contextFylker}
+            key={contextKey}
+            data={contextAreas}
             style={() => SELECTED_STYLE[theme]}
-            onEachFeature={(feature: Feature<AreaGeometry, FylkeProperties>, layer) => {
-              layer.bindTooltip(feature.properties.fylkesnavn, { sticky: true })
+            onEachFeature={(feature: Feature<AreaGeometry, ContextProperties>, layer) => {
+              layer.bindTooltip(contextLabel(feature.properties), { sticky: true })
             }}
           />
         ) : (
           <GeoJSON
-            key={fylkerKey}
-            data={contextFylker}
+            key={contextKey}
+            data={contextAreas}
             style={() => CONTEXT_STYLE[theme]}
             interactive={false}
           />
@@ -144,11 +150,11 @@ export function MapPreview({
       </MapContainer>
 
       <p className="sr-only" aria-live="polite">
-        {selectedFeatures.features.length === 0 && contextFylker.features.length === 0
+        {selectedFeatures.features.length === 0 && contextAreas.features.length === 0
           ? 'Ingen områder er valgt ennå. Kartet viser hele Norge.'
           : `Kartet viser ${
-              previewGranularity === 'fylker'
-                ? contextFylker.features.map((f) => f.properties.fylkesnavn).join(', ')
+              contextIsTarget
+                ? contextAreas.features.map((f) => contextLabel(f.properties)).join(', ')
                 : selectedFeatures.features.map((f) => featureLabel(f.properties)).join(', ')
             }.`}
       </p>

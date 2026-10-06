@@ -12,7 +12,8 @@
     "data:normalize": "node data-pipeline/scripts/02-normalize.mjs",
     "data:topology": "node data-pipeline/scripts/03-build-topology.mjs",
     "data:copy": "node data-pipeline/scripts/04-copy-to-app.mjs",
-    "data:build": "npm run data:download && npm run data:normalize && npm run data:topology && npm run data:copy",
+    "data:distrikter": "node data-pipeline/scripts/05-add-distrikter.mjs",
+    "data:build": "npm run data:download && npm run data:normalize && npm run data:topology && npm run data:copy && npm run data:distrikter",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist --dotfiles"
   },

@@ -1,4 +1,5 @@
-import type { BydelProperties, FylkeProperties, KommuneProperties } from './types'
+import { DISTRIKT_KINDS, kommuneGruppeId } from './distrikter'
+import type { BydelProperties, DistriktKind, FylkeProperties, GruppeKind, KommuneGruppe, KommuneProperties } from './types'
 
 /** Norwegian names contain spaces, slashes and æøå — keep the latter (valid in
  * filenames on every OS we care about) but normalize the rest for a clean,
@@ -10,30 +11,38 @@ function slugify(name: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+/** Names one fylke or district: "akershus", "øst-politidistrikt", "oslo-110-sentral"
+ *  (DSB's 110 names already say what they are). */
+function gruppeFilenameStem(kind: GruppeKind, gruppe: KommuneGruppe): string {
+  const navn = slugify(gruppe.navn)
+  return kind === 'politidistrikter' ? `${navn}-${slugify(DISTRIKT_KINDS.politidistrikter.entall)}` : navn
+}
+
 /**
  * Builds a filename that reflects the current selection:
- *  - one whole fylke selected           → "akershus-kommuner"
- *  - a single kommune selected          → "oslo"
- *  - anything else (mixed/partial)      → "n-kommuner-utvalg"
+ *  - every kommune in one group selected → "akershus-kommuner", "øst-politidistrikt-kommuner"
+ *  - a single kommune selected           → "oslo"
+ *  - anything else (mixed/partial)       → "n-kommuner-utvalg"
  * The caller appends the format-specific extension.
  */
 export function selectionFilenameStem(
   selectedKommuner: KommuneProperties[],
-  fylker: FylkeProperties[],
-  kommunerByFylke: Map<string, KommuneProperties[]>,
+  kind: GruppeKind,
+  groups: KommuneGruppe[],
+  kommunerByGroup: Map<string, KommuneProperties[]>,
 ): string {
   if (selectedKommuner.length === 1) {
     return slugify(selectedKommuner[0].kommunenavn)
   }
 
   if (selectedKommuner.length > 1) {
-    const fylkesnummerInSelection = new Set(selectedKommuner.map((k) => k.fylkesnummer))
-    if (fylkesnummerInSelection.size === 1) {
-      const [fylkesnummer] = fylkesnummerInSelection
-      const everyKommuneInFylke = kommunerByFylke.get(fylkesnummer) ?? []
-      if (everyKommuneInFylke.length === selectedKommuner.length) {
-        const fylke = fylker.find((f) => f.fylkesnummer === fylkesnummer)
-        if (fylke) return `${slugify(fylke.fylkesnavn)}-kommuner`
+    const groupIdsInSelection = new Set(selectedKommuner.map((k) => kommuneGruppeId(k, kind)))
+    if (groupIdsInSelection.size === 1) {
+      const [groupId] = groupIdsInSelection
+      const everyKommuneInGroup = kommunerByGroup.get(groupId) ?? []
+      if (everyKommuneInGroup.length === selectedKommuner.length) {
+        const group = groups.find((g) => g.id === groupId)
+        if (group) return `${gruppeFilenameStem(kind, group)}-kommuner`
       }
     }
   }
@@ -82,4 +91,22 @@ export function bydelSelectionFilenameStem(
   }
 
   return `${selectedBydeler.length}-bydeler-utvalg`
+}
+
+/**
+ * Builds a filename stem for a politidistrikt or 110-distrikt export:
+ *  - one politidistrikt selected  → "øst-politidistrikt"
+ *  - one 110-distrikt selected    → "oslo-110-sentral" (DSB's names already say what they are)
+ *  - every district of the kind   → "alle-politidistrikter"
+ *  - anything else                → "n-politidistrikter-utvalg"
+ */
+export function distriktSelectionFilenameStem(
+  kind: DistriktKind,
+  selected: KommuneGruppe[],
+  allOfKind: KommuneGruppe[],
+): string {
+  const { flertall } = DISTRIKT_KINDS[kind]
+  if (selected.length === 1) return gruppeFilenameStem(kind, selected[0])
+  if (selected.length === allOfKind.length) return `alle-${slugify(flertall)}`
+  return `${selected.length}-${slugify(flertall)}-utvalg`
 }

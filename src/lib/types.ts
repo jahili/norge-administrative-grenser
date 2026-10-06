@@ -13,6 +13,34 @@ export interface KommuneProperties {
   kommunenavn: string
   fylkesnummer: string
   fylkesnavn: string
+  politidistriktnummer: string
+  politidistriktnavn: string
+  distrikt110id: string
+  distrikt110navn: string
+}
+
+/** Politidistrikt from SSB's classification 109, e.g. { "p01", "Oslo" }. */
+export interface PolitidistriktProperties {
+  politidistriktnummer: string
+  politidistriktnavn: string
+}
+
+/** 110-distrikt (brannalarmsentral district) from DSB; the id is DSB's lokalId. */
+export interface Distrikt110Properties {
+  distrikt110id: string
+  distrikt110navn: string
+}
+
+/** Divisions built from whole kommuner, offered as alternatives to fylker. */
+export type DistriktKind = 'politidistrikter' | 'distrikter110'
+
+/** What kommuner are grouped by in step 1: fylker or one of the district kinds. */
+export type GruppeKind = 'fylker' | DistriktKind
+
+/** A selectable group of kommuner — a fylke, politidistrikt or 110-distrikt. */
+export interface KommuneGruppe {
+  id: string
+  navn: string
 }
 
 /** City districts (bydeler) and sub-areas (delområder) for the six kommuner
@@ -26,5 +54,5 @@ export interface BydelProperties {
 
 export type ExportFormat = 'geojson' | 'topojson'
 
-/** Whether the export contains fylke polygons, kommune subdivisions, or bydeler. */
-export type ExportGranularity = 'fylker' | 'kommuner' | 'bydeler'
+/** Whether the export contains fylke polygons, kommune subdivisions, bydeler, or districts. */
+export type ExportGranularity = 'fylker' | 'kommuner' | 'bydeler' | DistriktKind

@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react'
+import { DISTRIKT_KINDS } from '../lib/distrikter'
 import type { ExportFormat, ExportGranularity } from '../lib/types'
 
 interface ExportPanelProps {
@@ -16,11 +17,15 @@ const LEVEL_SINGULAR: Record<ExportGranularity, string> = {
   fylker: 'fylke',
   kommuner: 'kommune',
   bydeler: 'bydel',
+  politidistrikter: DISTRIKT_KINDS.politidistrikter.entall,
+  distrikter110: DISTRIKT_KINDS.distrikter110.entall,
 }
 const LEVEL_PLURAL: Record<ExportGranularity, string> = {
   fylker: 'fylker',
   kommuner: 'kommuner',
   bydeler: 'bydeler',
+  politidistrikter: DISTRIKT_KINDS.politidistrikter.flertall,
+  distrikter110: DISTRIKT_KINDS.distrikter110.flertall,
 }
 
 export function ExportPanel({
@@ -127,7 +132,7 @@ export function ExportPanel({
             Filnavn: <span className="font-medium text-slate-700 dark:text-slate-300">{filename}</span>
           </>
         ) : (
-          'Velg minst én kommune for å aktivere nedlasting.'
+          `Velg minst ${granularity in DISTRIKT_KINDS ? `ett ${LEVEL_SINGULAR[granularity]}` : 'én kommune'} for å aktivere nedlasting.`
         )}
       </p>
     </div>

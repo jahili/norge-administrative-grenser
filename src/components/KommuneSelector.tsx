@@ -1,32 +1,41 @@
 import { useId, useState } from 'react'
-import type { BydelProperties, FylkeProperties, KommuneProperties } from '../lib/types'
+import type { BydelProperties, KommuneGruppe, KommuneProperties } from '../lib/types'
 import type { SelectionApi } from '../hooks/useSelection'
 
 interface KommuneSelectorProps {
-  fylker: FylkeProperties[]
-  kommunerByFylke: Map<string, KommuneProperties[]>
+  /** Fylker or districts, in display order; only the selected ones are shown. */
+  groups: KommuneGruppe[]
+  /** Plural noun for the groups, e.g. "fylker" or "politidistrikter". */
+  gruppeFlertall: string
+  kommunerByGroup: Map<string, KommuneProperties[]>
   bydelsByKommune: Map<string, BydelProperties[]>
   selection: SelectionApi
 }
 
-export function KommuneSelector({ fylker, kommunerByFylke, bydelsByKommune, selection }: KommuneSelectorProps) {
-  const selectedFylker = fylker.filter((f) => selection.selectedFylker.has(f.fylkesnummer))
+export function KommuneSelector({
+  groups,
+  gruppeFlertall,
+  kommunerByGroup,
+  bydelsByKommune,
+  selection,
+}: KommuneSelectorProps) {
+  const selectedGroups = groups.filter((g) => selection.selectedGroups.has(g.id))
 
   return (
     <fieldset className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <legend className="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">2. Velg kommuner</legend>
 
-      {selectedFylker.length === 0 ? (
+      {selectedGroups.length === 0 ? (
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Velg ett eller flere fylker for å se kommunene deres her.
+          Velg ett eller flere {gruppeFlertall} for å se kommunene deres her.
         </p>
       ) : (
         <div className="mt-2 flex flex-col gap-4">
-          {selectedFylker.map((fylke) => (
-            <FylkeGroup
-              key={fylke.fylkesnummer}
-              fylke={fylke}
-              kommuner={kommunerByFylke.get(fylke.fylkesnummer) ?? []}
+          {selectedGroups.map((group) => (
+            <KommuneGroup
+              key={group.id}
+              group={group}
+              kommuner={kommunerByGroup.get(group.id) ?? []}
               bydelsByKommune={bydelsByKommune}
               selection={selection}
             />
@@ -37,14 +46,14 @@ export function KommuneSelector({ fylker, kommunerByFylke, bydelsByKommune, sele
   )
 }
 
-interface FylkeGroupProps {
-  fylke: FylkeProperties
+interface KommuneGroupProps {
+  group: KommuneGruppe
   kommuner: KommuneProperties[]
   bydelsByKommune: Map<string, BydelProperties[]>
   selection: SelectionApi
 }
 
-function FylkeGroup({ fylke, kommuner, bydelsByKommune, selection }: FylkeGroupProps) {
+function KommuneGroup({ group, kommuner, bydelsByKommune, selection }: KommuneGroupProps) {
   const headingId = useId()
   const searchId = useId()
   const [query, setQuery] = useState('')
@@ -70,15 +79,15 @@ function FylkeGroup({ fylke, kommuner, bydelsByKommune, selection }: FylkeGroupP
           ref={(el) => {
             if (el) el.indeterminate = someSelected && !allSelected
           }}
-          onChange={() => selection.toggleAllInFylke(fylke.fylkesnummer)}
+          onChange={() => selection.toggleAllInGroup(group.id)}
         />
-        Velg alle i {fylke.fylkesnavn} ({kommuner.length})
+        Velg alle i {group.navn} ({kommuner.length})
       </label>
 
       {kommuner.length > 8 && (
         <div className="mt-2">
           <label htmlFor={searchId} className="sr-only">
-            Søk i {fylke.fylkesnavn}
+            Søk i {group.navn}
           </label>
           <input
             id={searchId}

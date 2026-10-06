@@ -1,8 +1,19 @@
 import * as topojsonClient from 'topojson-client'
 import { topology as buildTopology } from 'topojson-server'
 import type { FeatureCollection } from 'geojson'
+import type { GeometryCollection } from 'topojson-specification'
 import type { NorwayTopologyType } from '../hooks/useTopology'
-import type { AreaGeometry, BydelProperties, ExportFormat, ExportGranularity, FylkeProperties, KommuneProperties } from './types'
+import { DISTRIKT_KINDS, toDistrikt } from './distrikter'
+import type { DistriktProperties } from './distrikter'
+import type {
+  AreaGeometry,
+  BydelProperties,
+  DistriktKind,
+  ExportFormat,
+  ExportGranularity,
+  FylkeProperties,
+  KommuneProperties,
+} from './types'
 
 /** Extracts the selected kommuner from one of the bundled kommune layers (with or without "havgrense") as a standalone GeoJSON FeatureCollection (WGS84). */
 export function selectedFeatureCollection(
@@ -39,18 +50,37 @@ export function selectedBydelFeatureCollection(
   }
 }
 
+/** Extracts the selected politidistrikter or 110-distrikter, with or without "havgrense". */
+export function selectedDistriktFeatureCollection(
+  topology: NorwayTopologyType,
+  kind: DistriktKind,
+  medHavgrense: boolean,
+  selectedIds: Set<string>,
+): FeatureCollection<AreaGeometry, DistriktProperties> {
+  const { objects } = DISTRIKT_KINDS[kind]
+  // The four district objects have different property types; widen to their
+  // union so topojson-client's overloads accept whichever one we pick.
+  const object = topology.objects[medHavgrense ? objects.med : objects.uten] as GeometryCollection<DistriktProperties>
+  const all = topojsonClient.feature(topology, object) as FeatureCollection<AreaGeometry, DistriktProperties>
+  return {
+    type: 'FeatureCollection',
+    features: all.features.filter((f) => selectedIds.has(toDistrikt(f.properties).id)),
+  }
+}
+
 /**
  * Builds the file to download, in the requested format and granularity.
  *  - GeoJSON: the plain FeatureCollection of selected features.
  *  - TopoJSON: a fresh topology built from just the selected features (named
- *    after the granularity, "kommuner", "fylker", or "bydeler"), so the
+ *    after the granularity, e.g. "kommuner" or "politidistrikter"), so the
  *    download only contains the selection — not the whole bundled dataset's arcs.
  */
 export function buildExport(
   features:
     | FeatureCollection<AreaGeometry, FylkeProperties>
     | FeatureCollection<AreaGeometry, KommuneProperties>
-    | FeatureCollection<AreaGeometry, BydelProperties>,
+    | FeatureCollection<AreaGeometry, BydelProperties>
+    | FeatureCollection<AreaGeometry, DistriktProperties>,
   granularity: ExportGranularity,
   format: ExportFormat,
 ): { blob: Blob; extension: string } {
