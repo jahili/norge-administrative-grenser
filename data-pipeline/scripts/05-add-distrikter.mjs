@@ -1,28 +1,36 @@
-// Adds politidistrikter and 110-distrikter to the bundled topology in
-// src/assets/norge-grenser.topojson.
+// Adds district divisions — politidistrikter, 110-distrikter, valgdistrikter,
+// økonomiske regioner, landsdeler and helseregioner — to the bundled topology
+// in src/assets/norge-grenser.topojson.
 //
-// Both divisions are made up of whole kommuner, so instead of shipping their
+// Every division is made up of whole kommuner, so instead of shipping their
 // own geometry we:
 //
-//   1. tag every kommune (both havgrense variants) with the politidistrikt and
-//      110-distrikt it belongs to, and
-//   2. build four new objects — politidistrikter, politidistrikterUtenHavgrense,
-//      distrikter110, distrikter110UtenHavgrense — by merging those kommuner
-//      with topojson-client's `mergeArcs`.
+//   1. tag every kommune (both havgrense variants) with the district it
+//      belongs to in each division, and
+//   2. build two new objects per division (e.g. `valgdistrikter` and
+//      `valgdistrikterUtenHavgrense`) by merging those kommuner with
+//      topojson-client's `mergeArcs`.
 //
 // `mergeArcs` only references the kommune layers' existing arcs, so the new
 // layers share borders exactly with every other layer, follow the coastline
 // toggle for free, and barely grow the file.
 //
-// Sources:
-//   - Politidistrikt: SSB KLASS "Standard for politidistrikt" (classification
-//     109), via its newest kommuneinndeling correspondence table.
+// Sources (see DISTRIKTER below):
+//   - SSB KLASS classifications with a kommune correspondence table: the
+//     newest table is used. If it predates the current kommune numbers (the
+//     helseregion table stops at Kommuneinndeling 2020), its kommune codes are
+//     translated forward with SSB's own kommune change log.
+//   - SSB KLASS classifications with a fylke correspondence table (landsdeler),
+//     applied through each kommune's fylkesnummer.
 //   - 110-distrikt: SSB's 110 classification (427) is stuck at the 2019
 //     version with 14 sentraler and has no kommune correspondence, so we use
 //     DSB's Brannalarmsentraler dataset, which carries the current districts as
 //     polygons. Those polygons are only used to assign each kommune to a
 //     district by area overlap; anything short of near-total overlap fails the
 //     step rather than guessing.
+//
+// Every assignment must cover exactly the bundled kommuner, one district each,
+// or the step fails.
 //
 // This step works on the already-built topology (rather than being folded into
 // 02/03) and is idempotent: it overwrites the district fields and objects on
@@ -43,11 +51,62 @@ const rawDir = path.join(__dirname, '..', 'raw')
 const topologyFile = path.join(__dirname, '..', '..', 'src', 'assets', 'norge-grenser.topojson')
 
 const KLASS_API = 'https://data.ssb.no/api/klass/v1'
-const POLITIDISTRIKT_CLASSIFICATION_ID = 109
+const KOMMUNE_CLASSIFICATION_ID = 131
 const DSB_110_WFS =
   'https://wfs.geonorge.no/skwms1/wfs.brannalarmsentraler?service=WFS&version=2.0.0&request=GetFeature&typeNames=app:Distrikt110'
 /** Minimum share of a kommune's area that must fall inside one 110-distrikt. */
 const MIN_110_SHARE = 0.98
+
+/**
+ * The divisions to add. `kind` is the topology object name (plus
+ * `UtenHavgrense`), `idField`/`nameField` the properties added to kommuner and
+ * districts, and `sortBy` the order districts are listed in.
+ * Keep in sync with DISTRIKT_KINDS in src/lib/distrikter.ts.
+ */
+const DISTRIKTER = [
+  {
+    kind: 'politidistrikter',
+    idField: 'politidistriktnummer',
+    nameField: 'politidistriktnavn',
+    sortBy: 'navn',
+    source: { type: 'ssb-kommune', classificationId: 109 },
+  },
+  {
+    kind: 'distrikter110',
+    idField: 'distrikt110id',
+    nameField: 'distrikt110navn',
+    sortBy: 'navn',
+    source: { type: 'dsb-110' },
+  },
+  {
+    kind: 'valgdistrikter',
+    idField: 'valgdistriktnummer',
+    nameField: 'valgdistriktnavn',
+    sortBy: 'nummer',
+    source: { type: 'ssb-kommune', classificationId: 543 },
+  },
+  {
+    kind: 'okonomiskeRegioner',
+    idField: 'okonomiskregionnummer',
+    nameField: 'okonomiskregionnavn',
+    sortBy: 'nummer',
+    source: { type: 'ssb-kommune', classificationId: 108 },
+  },
+  {
+    kind: 'landsdeler',
+    idField: 'landsdelnummer',
+    nameField: 'landsdelnavn',
+    sortBy: 'nummer',
+    source: { type: 'ssb-fylke', classificationId: 106 },
+  },
+  {
+    kind: 'helseregioner',
+    idField: 'helseregionnummer',
+    nameField: 'helseregionnavn',
+    sortBy: 'navn',
+    source: { type: 'ssb-kommune', classificationId: 105 },
+  },
+]
 
 await mkdir(rawDir, { recursive: true })
 
@@ -61,41 +120,39 @@ const topology = JSON.parse(await readFile(topologyFile, 'utf-8'))
 const topology2d = { ...topology, arcs: topology.arcs.map((arc) => arc.map(([x, y]) => [x, y])) }
 const kommuneLayers = { med: topology.objects.kommuner, uten: topology.objects.kommunerUtenHavgrense }
 const kommuner = kommuneLayers.med.geometries.map((g) => g.properties)
+const kommunenumre = new Set(kommuner.map((k) => k.kommunenummer))
 
-const politidistriktByKommune = await politidistriktAssignment()
-const distrikt110ByKommune = await distrikt110Assignment()
+// Assign first, so a failing source leaves the topology file untouched.
+const assignments = []
+for (const distrikt of DISTRIKTER) {
+  assignments.push({ distrikt, byKommune: await assign(distrikt) })
+}
 
 for (const layer of Object.values(kommuneLayers)) {
   for (const geometry of layer.geometries) {
     const { kommunenummer, kommunenavn, fylkesnummer, fylkesnavn } = geometry.properties
-    geometry.properties = {
-      kommunenummer,
-      kommunenavn,
-      fylkesnummer,
-      fylkesnavn,
-      ...politidistriktByKommune.get(kommunenummer),
-      ...distrikt110ByKommune.get(kommunenummer),
+    geometry.properties = { kommunenummer, kommunenavn, fylkesnummer, fylkesnavn }
+    for (const { distrikt, byKommune } of assignments) {
+      const { id, navn } = byKommune.get(kommunenummer)
+      geometry.properties[distrikt.idField] = id
+      geometry.properties[distrikt.nameField] = navn
     }
   }
 }
 
-topology.objects.politidistrikter = mergeKommuner(kommuneLayers.med, 'politidistriktnummer', 'politidistriktnavn')
-topology.objects.politidistrikterUtenHavgrense = mergeKommuner(
-  kommuneLayers.uten,
-  'politidistriktnummer',
-  'politidistriktnavn',
-)
-topology.objects.distrikter110 = mergeKommuner(kommuneLayers.med, 'distrikt110id', 'distrikt110navn')
-topology.objects.distrikter110UtenHavgrense = mergeKommuner(kommuneLayers.uten, 'distrikt110id', 'distrikt110navn')
+for (const distrikt of DISTRIKTER) {
+  topology.objects[distrikt.kind] = mergeKommuner(kommuneLayers.med, distrikt)
+  topology.objects[`${distrikt.kind}UtenHavgrense`] = mergeKommuner(kommuneLayers.uten, distrikt)
+}
 
 await writeFile(topologyFile, JSON.stringify(topology))
 console.log(
-  `[done] wrote ${topology.objects.politidistrikter.geometries.length} politidistrikter and ` +
-    `${topology.objects.distrikter110.geometries.length} 110-distrikter to ${path.relative(process.cwd(), topologyFile)}`,
+  `[done] wrote ${DISTRIKTER.map((d) => `${topology.objects[d.kind].geometries.length} ${d.kind}`).join(', ')} ` +
+    `to ${path.relative(process.cwd(), topologyFile)}`,
 )
 
-/** One merged geometry per distinct `idField` value, sorted by name. */
-function mergeKommuner(layer, idField, nameField) {
+/** One merged geometry per district, ordered by `sortBy`. */
+function mergeKommuner(layer, { idField, nameField, sortBy }) {
   const groups = new Map()
   for (const geometry of layer.geometries) {
     const id = geometry.properties[idField]
@@ -107,8 +164,33 @@ function mergeKommuner(layer, idField, nameField) {
     ...topojsonClient.mergeArcs(topology2d, group),
     properties: { [idField]: id, [nameField]: group[0].properties[nameField] },
   }))
-  geometries.sort((a, b) => a.properties[nameField].localeCompare(b.properties[nameField], 'nb'))
+  const sortField = sortBy === 'nummer' ? idField : nameField
+  geometries.sort((a, b) =>
+    a.properties[sortField].localeCompare(b.properties[sortField], 'nb', { numeric: true }),
+  )
   return { type: 'GeometryCollection', geometries }
+}
+
+/** District `{ id, navn }` per kommunenummer, validated to cover exactly our kommuner. */
+async function assign(distrikt) {
+  const { source } = distrikt
+  const { label, byKommune } =
+    source.type === 'dsb-110'
+      ? await distrikt110Assignment()
+      : source.type === 'ssb-fylke'
+        ? await ssbFylkeAssignment(source.classificationId)
+        : await ssbKommuneAssignment(source.classificationId)
+
+  const missing = [...kommunenumre].filter((nr) => !byKommune.has(nr))
+  if (missing.length > 0) {
+    throw new Error(
+      `${distrikt.kind}: "${label}" has no district for kommune ${missing.join(', ')}. ` +
+        'Delete data-pipeline/raw/ to re-download, or wait for the source to cover the current kommuneinndeling.',
+    )
+  }
+  const districtCount = new Set([...byKommune.values()].map((d) => d.id)).size
+  console.log(`[done] ${distrikt.kind}: ${kommunenumre.size} kommuner in ${districtCount} districts from "${label}"`)
+  return byKommune
 }
 
 async function fetchJson(url) {
@@ -117,63 +199,108 @@ async function fetchJson(url) {
   return response.json()
 }
 
-/** Downloads (once) SSB's newest politidistrikt ↔ kommune correspondence table. */
-async function downloadPolitidistriktCorrespondence() {
-  const finalPath = path.join(rawDir, 'politidistrikt-kommune.json')
+/** Reads `file` from raw/, or downloads it with `download()` and caches it there. */
+async function cached(file, download) {
+  const finalPath = path.join(rawDir, file)
   if (existsSync(finalPath)) {
-    console.log('[skip] politidistrikt-kommune.json already present')
+    console.log(`[skip] ${file} already present`)
     return JSON.parse(await readFile(finalPath, 'utf-8'))
   }
-
-  const classification = await fetchJson(`${KLASS_API}/classifications/${POLITIDISTRIKT_CLASSIFICATION_ID}`)
-  const currentVersion = classification.versions.find((v) => !v.validTo)
-  if (!currentVersion) throw new Error('No current version of the politidistrikt classification')
-  const version = await fetchJson(currentVersion._links.self.href)
-
-  const [newest] = version.correspondenceTables
-    .map((table) => ({ table, year: Number(/Kommuneinndeling (\d{4})/.exec(table.name)?.[1]) }))
-    .filter(({ year }) => year > 0)
-    .sort((a, b) => b.year - a.year)
-  if (!newest) throw new Error(`No kommune correspondence table in ${version.name}`)
-
-  console.log(`[download] ${newest.table.name}`)
-  const correspondence = await fetchJson(newest.table._links.self.href)
-  const result = {
-    source: newest.table.name,
-    mappings: correspondence.correspondenceMaps.map((m) => ({
-      politidistriktnummer: m.sourceCode,
-      politidistriktnavn: m.sourceName,
-      kommunenummer: m.targetCode,
-    })),
-  }
-  await writeFile(finalPath, JSON.stringify(result, null, 2), 'utf-8')
-  return result
+  const data = await download()
+  await writeFile(finalPath, JSON.stringify(data, null, 2), 'utf-8')
+  return data
 }
 
-/** Politidistrikt per kommunenummer; fails unless the table covers exactly our kommuner. */
-async function politidistriktAssignment() {
-  const { source, mappings } = await downloadPolitidistriktCorrespondence()
-  const byKommune = new Map()
-  for (const { kommunenummer, politidistriktnummer, politidistriktnavn } of mappings) {
-    if (byKommune.has(kommunenummer)) {
-      throw new Error(`Kommune ${kommunenummer} appears in more than one politidistrikt in "${source}"`)
+/**
+ * The newest correspondence table between a classification's current version
+ * and the `targetName` classification ("Kommuneinndeling"/"Fylkesinndeling"),
+ * as `{ source, year, mappings: [{ code, navn, target }] }` where `target` is
+ * the kommune- or fylkesnummer.
+ */
+function downloadCorrespondence(classificationId, targetName) {
+  return cached(`ssb-${classificationId}-${targetName.toLowerCase()}.json`, async () => {
+    const classification = await fetchJson(`${KLASS_API}/classifications/${classificationId}`)
+    const currentVersion = classification.versions.find((v) => !v.validTo)
+    if (!currentVersion) throw new Error(`No current version of classification ${classificationId}`)
+    const version = await fetchJson(currentVersion._links.self.href)
+
+    const pattern = new RegExp(`${targetName} (\\d{4})`)
+    const [newest] = version.correspondenceTables
+      .map((table) => ({ table, year: Number(pattern.exec(table.name)?.[1]) }))
+      .filter(({ year }) => year > 0)
+      .sort((a, b) => b.year - a.year)
+    if (!newest) throw new Error(`No ${targetName} correspondence table in ${version.name}`)
+
+    console.log(`[download] ${newest.table.name}`)
+    const correspondence = await fetchJson(newest.table._links.self.href)
+    return {
+      source: newest.table.name,
+      year: newest.year,
+      mappings: correspondence.correspondenceMaps.map((m) => ({
+        code: m.sourceCode,
+        navn: m.sourceName,
+        target: m.targetCode,
+      })),
     }
-    byKommune.set(kommunenummer, { politidistriktnummer, politidistriktnavn })
-  }
+  })
+}
 
-  const ours = new Set(kommuner.map((k) => k.kommunenummer))
-  const missing = [...ours].filter((nr) => !byKommune.has(nr))
-  const unknown = [...byKommune.keys()].filter((nr) => !ours.has(nr))
-  if (missing.length > 0 || unknown.length > 0) {
-    throw new Error(
-      `"${source}" does not match the bundled kommuner — missing: ${missing.join(', ') || 'none'}, ` +
-        `unknown: ${unknown.join(', ') || 'none'}. Delete data-pipeline/raw/politidistrikt-kommune.json ` +
-        'to re-download, or wait for SSB to publish a table for the current kommuneinndeling.',
-    )
+/** SSB's kommune change log from `year` until today: old kommunenummer → new kommunenumre. */
+async function kommuneChangesSince(year) {
+  const { codeChanges } = await cached(`ssb-kommune-endringer-${year}.json`, () =>
+    fetchJson(
+      `${KLASS_API}/classifications/${KOMMUNE_CLASSIFICATION_ID}/changes` +
+        `?from=${year}-01-01&to=${new Date().toISOString().slice(0, 10)}`,
+    ),
+  )
+  const next = new Map()
+  for (const { oldCode, newCode } of codeChanges) {
+    if (oldCode === newCode) continue
+    next.set(oldCode, [...(next.get(oldCode) ?? []), newCode])
   }
+  return next
+}
 
-  console.log(`[done] assigned ${byKommune.size} kommuner to politidistrikter from "${source}"`)
-  return byKommune
+/** The current kommunenumre an old kommunenummer became (several if it was split). */
+function currentKommunenumre(code, next, seen = new Set()) {
+  if (kommunenumre.has(code)) return [code]
+  if (seen.has(code)) return []
+  seen.add(code)
+  return (next.get(code) ?? []).flatMap((newCode) => currentKommunenumre(newCode, next, seen))
+}
+
+/** District per kommune from an SSB kommune correspondence table, translated to today's kommunenumre. */
+async function ssbKommuneAssignment(classificationId) {
+  const { source, year, mappings } = await downloadCorrespondence(classificationId, 'Kommuneinndeling')
+  const outdated = mappings.some((m) => /^\d{4}$/.test(m.target) && !m.target.startsWith('99') && !kommunenumre.has(m.target))
+  const next = outdated ? await kommuneChangesSince(year) : new Map()
+
+  const byKommune = new Map()
+  for (const { code, navn, target } of mappings) {
+    for (const kommunenummer of currentKommunenumre(target, next)) {
+      const existing = byKommune.get(kommunenummer)
+      if (existing && existing.id !== code) {
+        throw new Error(`Kommune ${kommunenummer} is in both ${existing.id} and ${code} in "${source}"`)
+      }
+      byKommune.set(kommunenummer, { id: code, navn })
+    }
+  }
+  return { label: outdated ? `${source}, translated to current kommunenumre` : source, byKommune }
+}
+
+/** District per kommune from an SSB fylke correspondence table, via each kommune's fylkesnummer. */
+async function ssbFylkeAssignment(classificationId) {
+  const { source, mappings } = await downloadCorrespondence(classificationId, 'Fylkesinndeling')
+  const byFylke = new Map()
+  for (const { code, navn, target } of mappings) {
+    if (byFylke.has(target)) throw new Error(`Fylke ${target} is in more than one district in "${source}"`)
+    byFylke.set(target, { id: code, navn })
+  }
+  const byKommune = new Map()
+  for (const { kommunenummer, fylkesnummer } of kommuner) {
+    if (byFylke.has(fylkesnummer)) byKommune.set(kommunenummer, byFylke.get(fylkesnummer))
+  }
+  return { label: source, byKommune }
 }
 
 /**
@@ -207,28 +334,16 @@ function parseDistrikt110Gml(gml) {
   })
 }
 
-/** Downloads (once) DSB's 110-distrikt polygons as GeoJSON. */
-async function downloadDistrikter110() {
-  const finalPath = path.join(rawDir, 'distrikter110.geojson')
-  if (existsSync(finalPath)) {
-    console.log('[skip] distrikter110.geojson already present')
-    return JSON.parse(await readFile(finalPath, 'utf-8'))
-  }
-
-  console.log(`[download] ${DSB_110_WFS}`)
-  const response = await fetch(DSB_110_WFS)
-  if (!response.ok) throw new Error(`Failed to download ${DSB_110_WFS}: HTTP ${response.status}`)
-  const features = parseDistrikt110Gml(await response.text())
-  if (features.length === 0) throw new Error('DSB WFS returned no Distrikt110 features')
-
-  const collection = { type: 'FeatureCollection', features }
-  await writeFile(finalPath, JSON.stringify(collection), 'utf-8')
-  return collection
-}
-
-/** 110-distrikt per kommunenummer, by largest area overlap with DSB's polygons. */
+/** 110-distrikt per kommune, by largest area overlap with DSB's polygons. */
 async function distrikt110Assignment() {
-  const distrikter = await downloadDistrikter110()
+  const distrikter = await cached('distrikter110.geojson', async () => {
+    console.log(`[download] ${DSB_110_WFS}`)
+    const response = await fetch(DSB_110_WFS)
+    if (!response.ok) throw new Error(`Failed to download ${DSB_110_WFS}: HTTP ${response.status}`)
+    const features = parseDistrikt110Gml(await response.text())
+    if (features.length === 0) throw new Error('DSB WFS returned no Distrikt110 features')
+    return { type: 'FeatureCollection', features }
+  })
   const distriktById = new Map(distrikter.features.map((f) => [f.properties.distrikt110id, f.properties]))
 
   // The coastline-clipped kommuner, so open sea doesn't dilute the shares.
@@ -270,7 +385,7 @@ async function distrikt110Assignment() {
       problems.push(`${kommunenummer} ${kommunenavn} (${(share * 100).toFixed(1)} %)`)
       continue
     }
-    byKommune.set(kommunenummer, { distrikt110id: bestId, distrikt110navn: distriktById.get(bestId).distrikt110navn })
+    byKommune.set(kommunenummer, { id: bestId, navn: distriktById.get(bestId).distrikt110navn })
   }
   if (problems.length > 0) {
     throw new Error(
@@ -278,12 +393,11 @@ async function distrikt110Assignment() {
     )
   }
 
-  const used = new Set([...byKommune.values()].map((v) => v.distrikt110id))
+  const used = new Set([...byKommune.values()].map((v) => v.id))
   const unused = [...distriktById.values()].filter((d) => !used.has(d.distrikt110id))
   if (unused.length > 0) {
     throw new Error(`110-distrikter without any kommune: ${unused.map((d) => d.distrikt110navn).join(', ')}`)
   }
 
-  console.log(`[done] assigned ${byKommune.size} kommuner to ${distriktById.size} 110-distrikter`)
-  return byKommune
+  return { label: 'DSB Brannalarmsentraler (Distrikt110)', byKommune }
 }

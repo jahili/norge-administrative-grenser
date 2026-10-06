@@ -11,11 +11,12 @@ function slugify(name: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-/** Names one fylke or district: "akershus", "øst-politidistrikt", "oslo-110-sentral"
- *  (DSB's 110 names already say what they are). */
+/** Names one fylke or district: "akershus", "øst-politidistrikt", "oslo-110-sentral",
+ *  "hedmark-valgdistrikt" (a suffix is only added when the name doesn't say what it is). */
 function gruppeFilenameStem(kind: GruppeKind, gruppe: KommuneGruppe): string {
   const navn = slugify(gruppe.navn)
-  return kind === 'politidistrikter' ? `${navn}-${slugify(DISTRIKT_KINDS.politidistrikter.entall)}` : navn
+  const suffiks = kind === 'fylker' ? undefined : DISTRIKT_KINDS[kind].filnavnSuffiks
+  return suffiks ? `${navn}-${slugify(suffiks)}` : navn
 }
 
 /**

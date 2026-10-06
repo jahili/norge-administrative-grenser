@@ -1,16 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import topologyUrl from '../assets/norge-grenser.topojson?url'
-import { DISTRIKT_KINDS, kommuneGruppeId, toDistrikt } from '../lib/distrikter'
-import type {
-  BydelProperties,
-  Distrikt110Properties,
-  DistriktKind,
-  FylkeProperties,
-  KommuneGruppe,
-  KommuneProperties,
-  PolitidistriktProperties,
-} from '../lib/types'
+import { DISTRIKT_KIND_LIST, kommuneGruppeId, toDistrikt } from '../lib/distrikter'
+import type { DistriktProperties } from '../lib/distrikter'
+import type { BydelProperties, DistriktKind, FylkeProperties, KommuneGruppe, KommuneProperties } from '../lib/types'
 
 export type NorwayTopologyType = Topology<{
   fylker: GeometryCollection<FylkeProperties>
@@ -18,10 +11,8 @@ export type NorwayTopologyType = Topology<{
   fylkerUtenHavgrense: GeometryCollection<FylkeProperties>
   kommunerUtenHavgrense: GeometryCollection<KommuneProperties>
   bydeler: GeometryCollection<BydelProperties>
-  politidistrikter: GeometryCollection<PolitidistriktProperties>
-  politidistrikterUtenHavgrense: GeometryCollection<PolitidistriktProperties>
-  distrikter110: GeometryCollection<Distrikt110Properties>
-  distrikter110UtenHavgrense: GeometryCollection<Distrikt110Properties>
+} & {
+  [K in DistriktKind | `${DistriktKind}UtenHavgrense`]: GeometryCollection<DistriktProperties>
 }>
 
 export interface NorwayTopology {
@@ -33,7 +24,7 @@ export interface NorwayTopology {
   /** All bydeler indexed by kommunenummer — only populated for the 6 kommuner
    *  that have bydeler in the dataset. */
   bydelsByKommune: Map<string, BydelProperties[]>
-  /** Politidistrikter and 110-distrikter, sorted by name. */
+  /** The districts of each kind, in the order the data lists them. */
   distrikter: Record<DistriktKind, KommuneGruppe[]>
   /** Kommuner in each district, by kind and district id. */
   kommunerByDistrikt: Record<DistriktKind, Map<string, KommuneProperties[]>>
@@ -81,10 +72,8 @@ export function useTopology(): TopologyState {
 
         const distrikter = {} as NorwayTopology['distrikter']
         const kommunerByDistrikt = {} as NorwayTopology['kommunerByDistrikt']
-        for (const kind of Object.keys(DISTRIKT_KINDS) as DistriktKind[]) {
-          distrikter[kind] = topology.objects[kind].geometries.map((g) =>
-            toDistrikt(g.properties as PolitidistriktProperties | Distrikt110Properties),
-          )
+        for (const kind of DISTRIKT_KIND_LIST) {
+          distrikter[kind] = topology.objects[kind].geometries.map((g) => toDistrikt(g.properties as DistriktProperties))
           const byDistrikt = new Map<string, KommuneProperties[]>()
           for (const kommune of kommuner) {
             const id = kommuneGruppeId(kommune, kind)

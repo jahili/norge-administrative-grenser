@@ -13,31 +13,24 @@ export interface KommuneProperties {
   kommunenavn: string
   fylkesnummer: string
   fylkesnavn: string
-  politidistriktnummer: string
-  politidistriktnavn: string
-  distrikt110id: string
-  distrikt110navn: string
-}
-
-/** Politidistrikt from SSB's classification 109, e.g. { "p01", "Oslo" }. */
-export interface PolitidistriktProperties {
-  politidistriktnummer: string
-  politidistriktnavn: string
-}
-
-/** 110-distrikt (brannalarmsentral district) from DSB; the id is DSB's lokalId. */
-export interface Distrikt110Properties {
-  distrikt110id: string
-  distrikt110navn: string
+  /** Plus an id and a name field per district kind, e.g. politidistriktnummer and
+   *  politidistriktnavn (see DISTRIKT_KINDS in ./distrikter). */
+  [distriktField: string]: string
 }
 
 /** Divisions built from whole kommuner, offered as alternatives to fylker. */
-export type DistriktKind = 'politidistrikter' | 'distrikter110'
+export type DistriktKind =
+  | 'politidistrikter'
+  | 'distrikter110'
+  | 'valgdistrikter'
+  | 'okonomiskeRegioner'
+  | 'landsdeler'
+  | 'helseregioner'
 
 /** What kommuner are grouped by in step 1: fylker or one of the district kinds. */
 export type GruppeKind = 'fylker' | DistriktKind
 
-/** A selectable group of kommuner — a fylke, politidistrikt or 110-distrikt. */
+/** A selectable group of kommuner — a fylke or a district. */
 export interface KommuneGruppe {
   id: string
   navn: string

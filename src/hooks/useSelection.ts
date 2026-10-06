@@ -15,6 +15,12 @@ interface SelectionState {
 type SelectionAction =
   | { type: 'toggle-group'; groupId: string; kommuner: KommuneProperties[]; bydelsByKommune: Map<string, BydelProperties[]> }
   | { type: 'toggle-all-groups'; allGroupIds: string[] }
+  | {
+      type: 'toggle-groups'
+      groupIds: string[]
+      kommuner: KommuneProperties[]
+      bydelsByKommune: Map<string, BydelProperties[]>
+    }
   | { type: 'toggle-kommune'; kommunenummer: string; bydeler: BydelProperties[] }
   | { type: 'toggle-all-in-group'; kommuner: KommuneProperties[]; bydelsByKommune: Map<string, BydelProperties[]> }
   | { type: 'toggle-bydel'; bydelnummer: string }
@@ -57,6 +63,24 @@ function reducer(state: SelectionState, action: SelectionAction): SelectionState
         return { selectedGroups: new Set(), selectedKommuner: new Set(), selectedBydeler: new Set() }
       }
       return { ...state, selectedGroups: new Set(action.allGroupIds) }
+    }
+    case 'toggle-groups': {
+      // Selects all of the given groups, or — if they all are selected
+      // already — deselects them along with their kommuner and bydeler.
+      const allSelected = action.groupIds.every((id) => state.selectedGroups.has(id))
+      const selectedGroups = new Set(state.selectedGroups)
+      if (!allSelected) {
+        for (const id of action.groupIds) selectedGroups.add(id)
+        return { ...state, selectedGroups }
+      }
+      for (const id of action.groupIds) selectedGroups.delete(id)
+      const selectedKommuner = new Set(state.selectedKommuner)
+      let selectedBydeler = state.selectedBydeler
+      for (const kommune of action.kommuner) {
+        selectedKommuner.delete(kommune.kommunenummer)
+        selectedBydeler = withoutBydelerFor(selectedBydeler, action.bydelsByKommune.get(kommune.kommunenummer) ?? [])
+      }
+      return { selectedGroups, selectedKommuner, selectedBydeler }
     }
     case 'toggle-kommune': {
       const selectedKommuner = withToggled(state.selectedKommuner, action.kommunenummer)
@@ -108,12 +132,27 @@ const initialState: SelectionState = {
   selectedBydeler: new Set(),
 }
 
+/** One independent selection per scope (inndeling), so switching scopes keeps each selection. */
+function scopedReducer(
+  states: Record<string, SelectionState>,
+  { scope, action }: { scope: string; action: SelectionAction },
+): Record<string, SelectionState> {
+  return { ...states, [scope]: reducer(states[scope] ?? initialState, action) }
+}
+
+/**
+ * Selection API for the groups of the current `scope` (e.g. "fylker" or
+ * "politidistrikter"). Each scope keeps its own selection.
+ */
 export function useSelection(
+  scope: string,
   groups: KommuneGruppe[],
   kommunerByGroup: Map<string, KommuneProperties[]>,
   bydelsByKommune: Map<string, BydelProperties[]>,
 ) {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const [states, scopedDispatch] = useReducer(scopedReducer, {})
+  const state = states[scope] ?? initialState
+  const dispatch = (action: SelectionAction) => scopedDispatch({ scope, action })
 
   const allGroupIds = useMemo(() => groups.map((g) => g.id), [groups])
 
@@ -129,6 +168,13 @@ export function useSelection(
     toggleGroup: (groupId: string) =>
       dispatch({ type: 'toggle-group', groupId, kommuner: kommunerByGroup.get(groupId) ?? [], bydelsByKommune }),
     toggleAllGroups: () => dispatch({ type: 'toggle-all-groups', allGroupIds }),
+    toggleGroups: (groupIds: string[]) =>
+      dispatch({
+        type: 'toggle-groups',
+        groupIds,
+        kommuner: groupIds.flatMap((id) => kommunerByGroup.get(id) ?? []),
+        bydelsByKommune,
+      }),
     toggleKommune: (kommunenummer: string) =>
       dispatch({ type: 'toggle-kommune', kommunenummer, bydeler: bydelsByKommune.get(kommunenummer) ?? [] }),
     toggleAllInGroup: (groupId: string) =>

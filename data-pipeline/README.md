@@ -18,7 +18,7 @@ Dette kjører, i rekkefølge:
 | 2 | `data:normalize` | Renser bort alle felter unntatt `kommunenummer`, `kommunenavn`, `fylkesnummer`, `fylkesnavn` (`data-pipeline/work/`) |
 | 3 | `data:topology` | Slår sammen til delt topologi, forenkler geometrien til ~5 % og skriver TopoJSON med presimplifiseringsdata |
 | 4 | `data:copy` | Kopierer resultatet til `src/assets/norge-grenser.topojson` |
-| 5 | `data:distrikter` | Merker kommunene med politidistrikt (SSB) og 110-distrikt (DSB), og legger til distriktlag slått sammen av kommunene, direkte i `src/assets/norge-grenser.topojson` |
+| 5 | `data:distrikter` | Merker kommunene med politidistrikt, valgdistrikt, økonomisk region, landsdel og helseregion (SSB) og 110-distrikt (DSB), og legger til distriktlag slått sammen av kommunene, direkte i `src/assets/norge-grenser.topojson` |
 
 `data-pipeline/raw/` og `data-pipeline/work/` er mellomlagre (gitignored —
 se `.gitignore`) og kan trygt slettes; de bygges på nytt neste gang pipelinen
@@ -57,9 +57,15 @@ kjøres.
   i samme steg som forenklingen — og gjenbruker topologien som allerede er
   bygget, som gir et ryddigere resultat enn å bygge topologi på nytt fra to
   uavhengig prosesserte filer. `geo2topo` er derfor ikke lenger en avhengighet.
-- **Politidistrikter og 110-distrikter (steg 5)**: Begge består av hele
-  kommuner, så i stedet for egen geometri merkes hver kommune med distriktet
-  sitt, og distriktlagene bygges med `topojson-client`s `mergeArcs`. De
+- **Distriktinndelinger (steg 5)**: Alle består av hele kommuner, så i stedet
+  for egen geometri merkes hver kommune med distriktet sitt, og distriktlagene
+  bygges med `topojson-client`s `mergeArcs`. Inndelingene er listet i
+  `DISTRIKTER` i skriptet: SSB-inndelinger med koblingstabell mot
+  kommuneinndelingen (politidistrikt 109, valgdistrikt 543, økonomiske regioner
+  108, helseregioner 105) eller fylkesinndelingen (landsdeler 106), og DSBs
+  110-distrikter. Er SSB-tabellen eldre enn dagens kommunenumre (helseregionene
+  har bare tabell mot Kommuneinndeling 2020), oversettes kommunekodene med SSBs
+  liste over kommuneendringer. De
   refererer dermed bare til kommunelagenes eksisterende buer: grensene sammenfaller
   nøyaktig, havgrense-valget virker automatisk, og filen vokser lite.
   Politidistrikt hentes fra SSBs nyeste koblingstabell mellom klassifikasjon 109

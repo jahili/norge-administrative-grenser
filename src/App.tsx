@@ -6,6 +6,7 @@ import { useSelection } from './hooks/useSelection'
 import { useSimplifiedTopology } from './hooks/useSimplifiedTopology'
 import { useTheme } from './hooks/useTheme'
 import { GruppeSelector } from './components/GruppeSelector'
+import type { GruppeSeksjon } from './components/GruppeSelector'
 import { KommuneSelector } from './components/KommuneSelector'
 import { BydelSelector } from './components/BydelSelector'
 import { InndelingToggle } from './components/InndelingToggle'
@@ -66,7 +67,8 @@ function App() {
         </h1>
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
           Her kan du finne og laste ned kartdata for norske administrative grenser. Velg mellom
-          fylker, kommuner og bydeler, eller politidistrikter og 110-distrikter, og last ned
+          fylker, kommuner og bydeler, eller grupper kommunene etter politidistrikter,
+          110-distrikter, valgdistrikter, økonomiske regioner, landsdeler eller helseregioner, og last ned
           grensene i GeoJSON- eller TopoJSON-format.
         </p>
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
@@ -84,7 +86,7 @@ function App() {
           <div className="flex items-center gap-3 py-10">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700 dark:border-slate-700 dark:border-t-teal-400" />
             <p role="status" className="text-slate-600 dark:text-slate-400">
-              Laster inn kartdata (3,7 MB) …
+              Laster inn kartdata (4,5 MB) …
             </p>
           </div>
         )}
@@ -107,14 +109,14 @@ function App() {
           >
             Kartverket
           </a>
-          . Politidistrikter fra{' '}
+          . Politidistrikter, valgdistrikter, økonomiske regioner, landsdeler og helseregioner fra{' '}
           <a
-            href="https://www.ssb.no/klass/klassifikasjoner/109"
+            href="https://www.ssb.no/klass/"
             className="underline hover:text-teal-700 dark:hover:text-teal-400"
             target="_blank"
             rel="noopener noreferrer"
           >
-            SSB
+            SSBs klassifikasjoner
           </a>{' '}
           og 110-distrikter fra{' '}
           <a
@@ -165,16 +167,29 @@ function Workspace({
   // grouping keeps its own selection, so switching inndeling back and forth
   // doesn't lose anything.
   const fylkeGrupper = useMemo(() => fylker.map((f) => ({ id: f.fylkesnummer, navn: f.fylkesnavn })), [fylker])
-  const selections = {
-    fylker: useSelection(fylkeGrupper, kommunerByFylke, bydelsByKommune),
-    politidistrikter: useSelection(distrikter.politidistrikter, kommunerByDistrikt.politidistrikter, bydelsByKommune),
-    distrikter110: useSelection(distrikter.distrikter110, kommunerByDistrikt.distrikter110, bydelsByKommune),
-  }
   const gruppeKind: GruppeKind = inndeling === 'administrativ' ? 'fylker' : inndeling
-  const selection = selections[gruppeKind]
   const groups = gruppeKind === 'fylker' ? fylkeGrupper : distrikter[gruppeKind]
   const kommunerByGroup = gruppeKind === 'fylker' ? kommunerByFylke : kommunerByDistrikt[gruppeKind]
+  const selection = useSelection(gruppeKind, groups, kommunerByGroup, bydelsByKommune)
   const gruppeFlertall = gruppeKind === 'fylker' ? 'fylker' : DISTRIKT_KINDS[gruppeKind].flertall
+  const gruppeArtikkel = gruppeKind === 'fylker' ? 'ett' : DISTRIKT_KINDS[gruppeKind].artikkel
+
+  // Divisions that nest within fylker (e.g. 85 økonomiske regioner) are listed
+  // under their fylke. A district's fylke is that of its kommuner; if any
+  // district turns out to span fylker, fall back to one flat list.
+  const fylkeSeksjoner = useMemo<GruppeSeksjon[] | undefined>(() => {
+    if (gruppeKind === 'fylker' || !DISTRIKT_KINDS[gruppeKind].listeEtterFylke) return undefined
+    const byFylke = new Map<string, KommuneGruppe[]>()
+    for (const group of groups) {
+      const fylker = new Set((kommunerByGroup.get(group.id) ?? []).map((k) => k.fylkesnummer))
+      if (fylker.size !== 1) return undefined
+      const [fylkesnummer] = fylker
+      byFylke.set(fylkesnummer, [...(byFylke.get(fylkesnummer) ?? []), group])
+    }
+    return fylkeGrupper
+      .filter((fylke) => byFylke.has(fylke.id))
+      .map((fylke) => ({ ...fylke, groups: byFylke.get(fylke.id) ?? [] }))
+  }, [gruppeKind, groups, kommunerByGroup, fylkeGrupper])
 
   const simplifiedTopology = useSimplifiedTopology(topology, detailPercent)
 
@@ -315,6 +330,7 @@ function Workspace({
           flertall={gruppeFlertall}
           groups={groups}
           selection={selection}
+          sections={fylkeSeksjoner}
           note={
             gruppeKind === 'fylker'
               ? undefined
@@ -330,6 +346,7 @@ function Workspace({
           key={`kommuner-${gruppeKind}`}
           groups={groups}
           gruppeFlertall={gruppeFlertall}
+          gruppeArtikkel={gruppeArtikkel}
           kommunerByGroup={kommunerByGroup}
           bydelsByKommune={bydelsByKommune}
           selection={selection}

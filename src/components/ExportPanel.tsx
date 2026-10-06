@@ -13,19 +13,11 @@ interface ExportPanelProps {
   featureCount: number
 }
 
-const LEVEL_SINGULAR: Record<ExportGranularity, string> = {
-  fylker: 'fylke',
-  kommuner: 'kommune',
-  bydeler: 'bydel',
-  politidistrikter: DISTRIKT_KINDS.politidistrikter.entall,
-  distrikter110: DISTRIKT_KINDS.distrikter110.entall,
-}
-const LEVEL_PLURAL: Record<ExportGranularity, string> = {
-  fylker: 'fylker',
-  kommuner: 'kommuner',
-  bydeler: 'bydeler',
-  politidistrikter: DISTRIKT_KINDS.politidistrikter.flertall,
-  distrikter110: DISTRIKT_KINDS.distrikter110.flertall,
+function levelWords(granularity: ExportGranularity): { entall: string; flertall: string; artikkel: string } {
+  if (granularity === 'fylker') return { entall: 'fylke', flertall: 'fylker', artikkel: 'ett' }
+  if (granularity === 'kommuner') return { entall: 'kommune', flertall: 'kommuner', artikkel: 'én' }
+  if (granularity === 'bydeler') return { entall: 'bydel', flertall: 'bydeler', artikkel: 'én' }
+  return DISTRIKT_KINDS[granularity]
 }
 
 export function ExportPanel({
@@ -46,7 +38,8 @@ export function ExportPanel({
   const effectiveStem = stem.trim() || defaultFilenameStem
   const filename = effectiveStem && extension ? `${effectiveStem}.${extension}` : null
 
-  const levelWord = featureCount === 1 ? LEVEL_SINGULAR[granularity] : LEVEL_PLURAL[granularity]
+  const { entall, flertall, artikkel } = levelWords(granularity)
+  const levelWord = featureCount === 1 ? entall : flertall
   const formatLabel = format === 'geojson' ? 'GeoJSON' : 'TopoJSON'
   const buttonLabel =
     disabled || featureCount === 0
@@ -132,7 +125,7 @@ export function ExportPanel({
             Filnavn: <span className="font-medium text-slate-700 dark:text-slate-300">{filename}</span>
           </>
         ) : (
-          `Velg minst ${granularity in DISTRIKT_KINDS ? `ett ${LEVEL_SINGULAR[granularity]}` : 'én kommune'} for å aktivere nedlasting.`
+          `Velg minst ${artikkel} ${entall} for å aktivere nedlasting.`
         )}
       </p>
     </div>

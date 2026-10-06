@@ -5,8 +5,9 @@ import type { SelectionApi } from '../hooks/useSelection'
 interface KommuneSelectorProps {
   /** Fylker or districts, in display order; only the selected ones are shown. */
   groups: KommuneGruppe[]
-  /** Plural noun for the groups, e.g. "fylker" or "politidistrikter". */
+  /** Plural noun for the groups and the article of its singular, e.g. "fylker"/"ett". */
   gruppeFlertall: string
+  gruppeArtikkel: 'ett' | 'én'
   kommunerByGroup: Map<string, KommuneProperties[]>
   bydelsByKommune: Map<string, BydelProperties[]>
   selection: SelectionApi
@@ -15,6 +16,7 @@ interface KommuneSelectorProps {
 export function KommuneSelector({
   groups,
   gruppeFlertall,
+  gruppeArtikkel,
   kommunerByGroup,
   bydelsByKommune,
   selection,
@@ -27,7 +29,7 @@ export function KommuneSelector({
 
       {selectedGroups.length === 0 ? (
         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Velg ett eller flere {gruppeFlertall} for å se kommunene deres her.
+          Velg {gruppeArtikkel} eller flere {gruppeFlertall} for å se kommunene deres her.
         </p>
       ) : (
         <div className="mt-2 flex flex-col gap-4">
