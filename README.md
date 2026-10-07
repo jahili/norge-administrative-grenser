@@ -50,8 +50,9 @@ Alt skjer i nettleseren — ingen data sendes til noen server.
 
 - [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vite.dev/)
 - [Tailwind CSS v4](https://tailwindcss.com/) (mørk modus følger OS-innstillingen, med manuell overstyring)
-- [Leaflet](https://leafletjs.com/) / react-leaflet for kartvisning, med Esris
-  Light/Dark Gray Canvas som bakgrunnskart (krever ingen API-nøkkel)
+- [Leaflet](https://leafletjs.com/) / react-leaflet for kartvisning, med
+  [CARTO](https://carto.com/attributions) Positron/Dark Matter som bakgrunnskart (gratis API-nøkkel
+  fra [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey/), satt i `src/components/MapPreview.tsx`)
 - [topojson-client](https://github.com/topojson/topojson-client) og
   [topojson-server](https://github.com/topojson/topojson-server) for konvertering i nettleseren
 - Selvhostet [Inter](https://rsms.me/inter/)-font (ingen eksterne font-kall)

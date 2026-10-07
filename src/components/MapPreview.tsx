@@ -49,21 +49,17 @@ const NORWAY_CENTER: [number, number] = [64.5, 13]
 const NORWAY_ZOOM = 4
 
 // Monochrome basemaps that match the app's grayscale design; the default OSM
-// tiles are far too colorful next to it. Esri's Canvas basemaps need no API key
-// (CARTO's basemaps now return an "API KEY REQUIRED" placeholder tile).
-const ESRI_CANVAS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas'
+// tiles are far too colorful next to it. CARTO's raster basemaps need an API
+// key since September 2026 (keyless tiles are stamped "API KEY REQUIRED").
+// The key is free (5M tiles/month non-commercial, 1M commercial) and, like any
+// browser map key, public in the shipped code anyway.
+const CARTO_KEY = 'cb1_4cw2_1_22d885a57af0aabf9464b97c'
 const TILES = {
-  light: {
-    base: `${ESRI_CANVAS}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
-    labels: `${ESRI_CANVAS}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
-  },
-  dark: {
-    base: `${ESRI_CANVAS}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
-    labels: `${ESRI_CANVAS}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
-  },
+  light: `https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
+  dark: `https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`,
 } as const
-const TILE_ATTRIBUTION = 'Powered by <a href="https://www.esri.com">Esri</a> | Esri, HERE, Garmin, &copy; OpenStreetMap-bidragsytere'
-const TILE_MAX_ZOOM = 16
+const TILE_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-bidragsytere &copy; <a href="https://carto.com/attributions">CARTO</a>'
 
 const SELECTED_STYLE = {
   light: { color: '#0f766e', weight: 1.5, fillColor: '#14b8a6', fillOpacity: 0.4 },
@@ -121,17 +117,7 @@ export function MapPreview({
         ref={mapRef}
         aria-label="Forhåndsvisning av valgte områder på kart"
       >
-        <TileLayer
-          key={`tiles-${theme}`}
-          attribution={TILE_ATTRIBUTION}
-          url={TILES[theme].base}
-          maxNativeZoom={TILE_MAX_ZOOM}
-        />
-        <TileLayer
-          key={`labels-${theme}`}
-          url={TILES[theme].labels}
-          maxNativeZoom={TILE_MAX_ZOOM}
-        />
+        <TileLayer key={`tiles-${theme}`} attribution={TILE_ATTRIBUTION} url={TILES[theme]} />
 
         {/* Fylke/district layer: filled when it is the export target, dashed outline otherwise */}
         {contextIsTarget ? (
