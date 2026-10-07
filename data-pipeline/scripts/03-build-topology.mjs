@@ -31,7 +31,7 @@
 //      after simplification (no slivers/gaps) and measurably shrinks the
 //      bundle, since the inland arcs are stored once and reused by both
 //      variants.
-//   2. Simplify that shared topology to ~5% of its original vertex count
+//   2. Simplify that shared topology to ~20% of its original vertex count
 //      (Visvalingam, "keep-shapes" so small kommuner like Utsira don't
 //      vanish).
 //   3. Export as TopoJSON with `presimplify`. This stamps every arc vertex

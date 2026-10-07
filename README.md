@@ -95,7 +95,8 @@ npm run data:normalize   # 02: normaliser til felles skjema (fylker, kommuner, b
 npm run data:topology    # 03: bygg delt topologi med mapshaper + presimplify
 npm run data:copy        # 04: kopier resultatet inn i appen (src/assets/)
 npm run data:distrikter  # 05: legg distriktlagene (politi, 110, valg m.fl.) til i src/assets/-filen
-npm run data:build       # alle fem stegene i rekkefølge
+npm run data:grunnkretser # 06: bygg grunnkretsfilene, én per fylke (src/assets/grunnkretser/)
+npm run data:build       # alle seks stegene i rekkefølge
 ```
 
 Steg 05 kan kjøres alene mot den ferdigbygde filen. Det henter SSBs koblingstabeller mot

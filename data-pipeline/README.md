@@ -1,7 +1,8 @@
 # Datapipeline
 
-Bygger `src/assets/norge-grenser.topojson`, den eneste geografiske datafilen
-appen bruker. Alt skjer offline mot ferdig nedlastede filer — appen selv gjør
+Bygger `src/assets/norge-grenser.topojson`, hovedfilen appen laster ved
+oppstart, og grunnkretsfilene i `src/assets/grunnkretser/` som appen bare
+henter ved behov. Alt skjer offline mot ferdig nedlastede filer — appen selv gjør
 ingen kall til Geonorge, SSB, DSB eller andre API-er.
 
 ## Kjøre hele pipelinen
@@ -15,10 +16,11 @@ Dette kjører, i rekkefølge:
 | Steg | Script | Hva det gjør |
 | --- | --- | --- |
 | 1 | `data:download` | Laster ned kommune- og fylkedatasettene fra Geonorge, og SSBs kommune- og fylkesnavn (`data-pipeline/raw/`) |
-| 2 | `data:normalize` | Renser bort alle felter unntatt `kommunenummer`, `kommunenavn`, `fylkesnummer`, `fylkesnavn` (`data-pipeline/work/`) |
-| 3 | `data:topology` | Slår sammen til delt topologi, forenkler geometrien til ~5 % og skriver TopoJSON med presimplifiseringsdata |
+| 2 | `data:normalize` | Renser bort alle felter unntatt nummer og navn for kommune og fylke (norsk og fullt offisielt navn) (`data-pipeline/work/`) |
+| 3 | `data:topology` | Slår sammen til delt topologi, forenkler geometrien til ~20 % og skriver TopoJSON med presimplifiseringsdata |
 | 4 | `data:copy` | Kopierer resultatet til `src/assets/norge-grenser.topojson` |
 | 5 | `data:distrikter` | Merker kommunene med distriktene sine i elleve inndelinger (SSB, og DSB for 110), og legger til distriktlag slått sammen av kommunene, direkte i `src/assets/norge-grenser.topojson` |
+| 6 | `data:grunnkretser` | Bygger én grunnkretsfil per fylke (`src/assets/grunnkretser/<fylkesnummer>.topojson` + `index.json`), med og uten havgrense |
 
 `data-pipeline/raw/` og `data-pipeline/work/` er mellomlagre (gitignored —
 se `.gitignore`) og kan trygt slettes; de bygges på nytt neste gang pipelinen
@@ -52,7 +54,7 @@ kjøres.
 - **Forenkling og delt topologi**: Fylke- og kommunelagene importeres sammen
   («combine-files») slik at mapshaper bygger delt topologi — sammenfallende
   grenser får identiske koordinater. Forenkling av denne delte topologien
-  (Visvalingam, ~5 %, `keep-shapes` så små kommuner som Utsira ikke
+  (Visvalingam, ~20 %, `keep-shapes` så små kommuner som Utsira ikke
   forsvinner) holder nabogrenser justert, uten gap eller overlapp.
 - **`presimplify` i stedet for flere oppløsninger**: Output skrives med
   mapshapers `presimplify`-flagg, som merker hvert arc-punkt med terskelen det
@@ -95,3 +97,22 @@ kjøres.
   «Grense»). Steg 1 finner derfor GeoJSON-filen i arkivet selv, og steg 2
   godtar begge oppsettene og beholder bare flatene. Geometrien er uendret: et
   nytt bygg i oktober 2026 ga en byte-identisk fil.
+- **Grunnkretser (steg 6)**: 14 126 grunnkretser er for mye å legge i
+  hovedfilen uten at hele appen blir tregere, så de ligger i én fil per fylke
+  (0,4–1,8 MB, totalt ~15 MB / ~4 MB komprimert) som appen bare henter når
+  noen ber om grunnkretser. Kilden er Kartverkets «Statistiske enheter
+  grunnkretser», hentet via Geonorges bestillings-API (datasettet har ingen
+  fast nedlastingslenke), og delområdenavn fra SSBs klassifikasjon 1.
+  Grunnkretsene følger kommunegrensene *med* havgrense; varianten langs
+  kystlinjen klippes mot kommunene uten havgrense. Hele landet forenkles under
+  ett (samme 20 % som hovedfilen) før det deles per fylke, slik at grenser
+  mellom fylker er like i begge filene. Steget feiler hvis et grunnkretsnummer
+  er ugyldig, duplisert eller ikke starter med kommunenummeret, hvis en kommune
+  mangler grunnkretser eller delområdenavn, eller hvis grunnkretsene ikke
+  dekker kommunens areal innenfor 0,5 % (med og uten havgrense).
+  Fallgruve: mapshapers `-clip` endrer laget som klippes selv når resultatet
+  legges i et nytt lag (`+ name=…`) — arealet i Ås og Årdal vokste 0,5–0,7 % —
+  så klippingen gjøres i en egen kjøring. To grunnkretser (Feistein og
+  Sjysletta) ligger helt i sjøen og finnes bare i varianten med havgrense.
+  SSB lister i tillegg «Uoppgitt grunnkrets» (xxxx9999) per kommune og
+  Svalbards tre grunnkretser; de har ingen geometri og er ikke med.
