@@ -11,6 +11,8 @@ interface DataTabellProps {
 }
 
 const CELL = 'px-2 py-1 text-left align-top whitespace-nowrap'
+/** Rendering thousands of table rows (e.g. every grunnkrets) would stall the page; the CSV has them all. */
+const MAX_VISTE_RADER = 500
 
 /**
  * Shows the attribute table that will be in the downloaded file: which
@@ -119,7 +121,9 @@ export function DataTabell({ granularity, rows, example, onDownloadCsv }: DataTa
       {rows.length > 0 && (
         <details className="mt-4">
           <summary className="cursor-pointer text-sm font-medium text-slate-700 hover:text-teal-700 dark:text-slate-300 dark:hover:text-teal-400">
-            Vis alle rader ({rows.length})
+            {rows.length > MAX_VISTE_RADER
+              ? `Vis de første ${MAX_VISTE_RADER} radene (av ${rows.length} — CSV-filen har alle)`
+              : `Vis alle rader (${rows.length})`}
           </summary>
           <div className="mt-2 max-h-80 overflow-auto rounded-xs border border-slate-200 dark:border-slate-800">
             <table className="w-full border-collapse text-xs">
@@ -138,7 +142,7 @@ export function DataTabell({ granularity, rows, example, onDownloadCsv }: DataTa
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, i) => (
+                {rows.slice(0, MAX_VISTE_RADER).map((row, i) => (
                   <tr key={row[nokkel] ?? i} className="border-t border-slate-100 dark:border-slate-800">
                     {columns.map((column) => (
                       <td

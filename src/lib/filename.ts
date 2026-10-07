@@ -111,3 +111,27 @@ export function distriktSelectionFilenameStem(
   if (selected.length === allOfKind.length) return `alle-${slugify(flertall)}`
   return `${selected.length}-${slugify(flertall)}-utvalg`
 }
+
+/**
+ * Builds a filename stem for a grunnkrets export, from the kommuner they are in:
+ *  - one kommune                         → "oslo-grunnkretser"
+ *  - every kommune in one fylke/district → "akershus-grunnkretser"
+ *  - anything else                       → "grunnkretser-i-n-kommuner"
+ * "-utvalg" is added when some delområder are left out.
+ */
+export function grunnkretsSelectionFilenameStem(
+  selectedKommuner: KommuneProperties[],
+  kind: GruppeKind,
+  groups: KommuneGruppe[],
+  kommunerByGroup: Map<string, KommuneProperties[]>,
+  someDelomraderLeftOut: boolean,
+): string {
+  const kommuneStem = selectionFilenameStem(selectedKommuner, kind, groups, kommunerByGroup)
+  const stem =
+    selectedKommuner.length === 1
+      ? `${kommuneStem}-grunnkretser`
+      : kommuneStem.endsWith('-kommuner')
+        ? `${kommuneStem.slice(0, -'-kommuner'.length)}-grunnkretser`
+        : `grunnkretser-i-${selectedKommuner.length}-kommuner`
+  return someDelomraderLeftOut ? `${stem}-utvalg` : stem
+}

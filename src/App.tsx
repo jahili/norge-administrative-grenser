@@ -4,11 +4,14 @@ import { useTopology } from './hooks/useTopology'
 import type { NorwayTopologyType } from './hooks/useTopology'
 import { useSelection } from './hooks/useSelection'
 import { useSimplifiedTopology } from './hooks/useSimplifiedTopology'
+import { useGrunnkretser } from './hooks/useGrunnkretser'
 import { useTheme } from './hooks/useTheme'
 import { GruppeSelector } from './components/GruppeSelector'
 import type { GruppeSeksjon } from './components/GruppeSelector'
 import { KommuneSelector } from './components/KommuneSelector'
 import { BydelSelector } from './components/BydelSelector'
+import { GrunnkretsSelector } from './components/GrunnkretsSelector'
+import type { Delomrade } from './components/GrunnkretsSelector'
 import { InndelingToggle } from './components/InndelingToggle'
 import type { Inndeling } from './components/InndelingToggle'
 import { HavgrenseToggle } from './components/HavgrenseToggle'
@@ -30,7 +33,9 @@ import {
   fylkeSelectionFilenameStem,
   bydelSelectionFilenameStem,
   distriktSelectionFilenameStem,
+  grunnkretsSelectionFilenameStem,
 } from './lib/filename'
+import { delomraderByKommune, grunnkretsFeatures } from './lib/grunnkretser'
 import { DISTRIKT_KINDS, toDistrikt } from './lib/distrikter'
 import type { DistriktProperties } from './lib/distrikter'
 import type {
@@ -41,6 +46,7 @@ import type {
   DistriktKind,
   FylkeProperties,
   GruppeKind,
+  GrunnkretsProperties,
   KommuneGruppe,
   KommuneProperties,
 } from './lib/types'
@@ -139,6 +145,9 @@ function App() {
   )
 }
 
+/** Above this many features the download is only built when someone downloads it. */
+const LAZY_EXPORT_FEATURES = 2000
+
 interface WorkspaceProps {
   topology: NorwayTopologyType
   fylker: FylkeProperties[]
@@ -164,6 +173,8 @@ function Workspace({
   const [format, setFormat] = useState<ExportFormat>('geojson')
   const [medHavgrense, setMedHavgrense] = useState(false)
   const [inndeling, setInndeling] = useState<Inndeling>('administrativ')
+  const [grunnkretsModus, setGrunnkretsModus] = useState(false)
+  const [utelatteDelomrader, setUtelatteDelomrader] = useState<Set<string>>(new Set())
 
   // Kommuner are grouped by fylke or by one of the district kinds. Each
   // grouping keeps its own selection, so switching inndeling back and forth
@@ -193,7 +204,7 @@ function Workspace({
       .map((fylke) => ({ ...fylke, groups: byFylke.get(fylke.id) ?? [] }))
   }, [gruppeKind, groups, kommunerByGroup, fylkeGrupper])
 
-  const simplifiedTopology = useSimplifiedTopology(topology, detailPercent)
+  const { topology: simplifiedTopology, minWeight } = useSimplifiedTopology(topology, detailPercent)
 
   const kommuneObject = medHavgrense ? 'kommuner' : 'kommunerUtenHavgrense'
   const fylkeObject = medHavgrense ? 'fylker' : 'fylkerUtenHavgrense'
@@ -232,6 +243,52 @@ function Workspace({
     [simplifiedTopology, selection.selectedBydeler],
   )
 
+  // --- Grunnkretser: fetched per fylke, only once asked for ---
+  const valgteKommuner = useMemo(
+    () => kommuner.filter((k) => selection.selectedKommuner.has(k.kommunenummer)),
+    [kommuner, selection.selectedKommuner],
+  )
+  const brukerGrunnkretser = grunnkretsModus && valgteKommuner.length > 0
+  const grunnkretsFylker = useMemo(() => [...new Set(valgteKommuner.map((k) => k.fylkesnummer))], [valgteKommuner])
+  const grunnkretsState = useGrunnkretser(grunnkretsFylker, brukerGrunnkretser)
+  const kommuneByNummer = useMemo(() => new Map(kommuner.map((k) => [k.kommunenummer, k])), [kommuner])
+
+  const delomrader = useMemo(() => {
+    const merged = new Map<string, Delomrade[]>()
+    for (const t of grunnkretsState.topologies.values()) for (const [k, list] of delomraderByKommune(t)) merged.set(k, list)
+    return merged
+  }, [grunnkretsState.topologies])
+
+  const selectedGrunnkretsFeatures = useMemo<FeatureCollection<AreaGeometry, GrunnkretsProperties>>(
+    () =>
+      brukerGrunnkretser
+        ? grunnkretsFeatures(
+            [...grunnkretsState.topologies.values()],
+            medHavgrense,
+            minWeight,
+            selection.selectedKommuner,
+            utelatteDelomrader,
+            kommuneByNummer,
+            gruppeKind,
+          )
+        : { type: 'FeatureCollection', features: [] },
+    [brukerGrunnkretser, grunnkretsState.topologies, medHavgrense, minWeight, selection.selectedKommuner, utelatteDelomrader, kommuneByNummer, gruppeKind],
+  )
+  const someDelomraderLeftOut = valgteKommuner.some((k) =>
+    (delomrader.get(k.kommunenummer) ?? []).some((d) => utelatteDelomrader.has(d.delomradenummer)),
+  )
+
+  function handleDelomraderChange(delomradenumre: string[], include: boolean) {
+    setUtelatteDelomrader((prev) => {
+      const next = new Set(prev)
+      for (const nr of delomradenumre) {
+        if (include) next.delete(nr)
+        else next.add(nr)
+      }
+      return next
+    })
+  }
+
   const kommunerMedBydeler = useMemo(
     () =>
       kommuner.filter(
@@ -243,6 +300,7 @@ function Workspace({
   // Granularity follows the deepest selection level the user has made —
   // no separate radio button needed.
   const effectiveGranularity: ExportGranularity = (() => {
+    if (brukerGrunnkretser) return 'grunnkretser'
     if (selection.selectedBydeler.size > 0) return 'bydeler'
     if (selection.selectedKommuner.size > 0) return 'kommuner'
     if (selection.selectedGroups.size > 0) return gruppeKind
@@ -253,21 +311,26 @@ function Workspace({
     | { granularity: 'fylker'; features: FeatureCollection<AreaGeometry, FylkeProperties> }
     | { granularity: 'kommuner'; features: FeatureCollection<AreaGeometry, KommuneProperties> }
     | { granularity: 'bydeler'; features: FeatureCollection<AreaGeometry, BydelProperties> }
+    | { granularity: 'grunnkretser'; features: FeatureCollection<AreaGeometry, GrunnkretsProperties> }
     | { granularity: DistriktKind; features: FeatureCollection<AreaGeometry, DistriktProperties> }
   >(() => {
+    if (effectiveGranularity === 'grunnkretser') return { granularity: 'grunnkretser', features: selectedGrunnkretsFeatures }
     if (effectiveGranularity === 'bydeler') return { granularity: 'bydeler', features: selectedBydelFeatures }
     if (effectiveGranularity === 'kommuner') return { granularity: 'kommuner', features: selectedFeatures }
     return contextAreas.kind === 'fylker'
       ? { granularity: 'fylker', features: contextAreas.features }
       : { granularity: contextAreas.kind, features: contextAreas.features }
-  }, [effectiveGranularity, contextAreas, selectedBydelFeatures, selectedFeatures])
+  }, [effectiveGranularity, contextAreas, selectedGrunnkretsFeatures, selectedBydelFeatures, selectedFeatures])
 
+  // The download is normally built up front so its exact size can be shown,
+  // but for thousands of grunnkretser that would make every click sluggish —
+  // then it is only built when someone actually downloads.
+  const featureCount = exportTarget.features.features.length
+  const buildOnDownload = featureCount > LAZY_EXPORT_FEATURES
   const exportResult = useMemo(
     () =>
-      exportTarget.features.features.length > 0
-        ? buildExport(exportTarget.features, exportTarget.granularity, format)
-        : null,
-    [exportTarget, format],
+      featureCount > 0 && !buildOnDownload ? buildExport(exportTarget.features, exportTarget.granularity, format) : null,
+    [exportTarget, format, featureCount, buildOnDownload],
   )
 
   const filenameStem = useMemo(() => {
@@ -275,6 +338,8 @@ function Workspace({
     switch (exportTarget.granularity) {
       case 'fylker':
         return fylkeSelectionFilenameStem(exportTarget.features.features.map((f) => f.properties))
+      case 'grunnkretser':
+        return grunnkretsSelectionFilenameStem(valgteKommuner, gruppeKind, groups, kommunerByGroup, someDelomraderLeftOut)
       case 'bydeler':
         return bydelSelectionFilenameStem(
           exportTarget.features.features.map((f) => f.properties),
@@ -295,11 +360,16 @@ function Workspace({
           distrikter[exportTarget.granularity],
         )
     }
-  }, [exportTarget, kommuner, bydelsByKommune, gruppeKind, groups, kommunerByGroup, distrikter])
+  }, [exportTarget, kommuner, bydelsByKommune, gruppeKind, groups, kommunerByGroup, distrikter, valgteKommuner, someDelomraderLeftOut])
 
   // Map shows selected bydeler or kommuner with fill; the selected fylker or
   // districts are shown as outlines, or filled when they are the export target.
-  const previewFeatures = effectiveGranularity === 'bydeler' ? selectedBydelFeatures : selectedFeatures
+  const previewFeatures =
+    effectiveGranularity === 'grunnkretser'
+      ? selectedGrunnkretsFeatures
+      : effectiveGranularity === 'bydeler'
+        ? selectedBydelFeatures
+        : selectedFeatures
   const contextIsTarget = effectiveGranularity === gruppeKind
 
   const previewLabel = (() => {
@@ -308,6 +378,11 @@ function Workspace({
       if (gruppeKind === 'fylker') return `${n} fylke${n === 1 ? '' : 'r'} valgt.`
       const { entall, flertall } = DISTRIKT_KINDS[gruppeKind]
       return n === 0 ? `Ingen ${flertall} valgt ennå.` : `${n} ${n === 1 ? entall : flertall} valgt.`
+    }
+    if (effectiveGranularity === 'grunnkretser') {
+      const n = selectedGrunnkretsFeatures.features.length
+      if (grunnkretsState.loading.length > 0) return 'Laster grunnkretser …'
+      return `${n} grunnkrets${n === 1 ? '' : 'er'} i ${valgteKommuner.length} kommune${valgteKommuner.length === 1 ? '' : 'r'}.`
     }
     if (effectiveGranularity === 'bydeler') {
       const n = selectedBydelFeatures.features.length
@@ -318,8 +393,9 @@ function Workspace({
   })()
 
   function handleDownload(filename: string) {
-    if (!exportResult) return
-    downloadBlob(exportResult.blob, filename)
+    const result = exportResult ?? (featureCount > 0 ? buildExport(exportTarget.features, exportTarget.granularity, format) : null)
+    if (!result) return
+    downloadBlob(result.blob, filename)
   }
 
   // The attribute table of the export, and one feature's properties at the
@@ -329,6 +405,7 @@ function Workspace({
     [exportTarget],
   )
   const dataExample = (() => {
+    if (effectiveGranularity === 'grunnkretser') return dataRows[0]
     const objectName =
       effectiveGranularity === 'fylker' || effectiveGranularity === 'kommuner' || effectiveGranularity === 'bydeler'
         ? effectiveGranularity
@@ -371,11 +448,22 @@ function Workspace({
           bydelsByKommune={bydelsByKommune}
           selection={selection}
         />
-        <BydelSelector
-          kommunerMedBydeler={kommunerMedBydeler}
-          bydelsByKommune={bydelsByKommune}
-          selection={selection}
+        <GrunnkretsSelector
+          kommuner={valgteKommuner}
+          enabled={grunnkretsModus}
+          onEnabledChange={setGrunnkretsModus}
+          state={grunnkretsState}
+          delomraderByKommune={delomrader}
+          utelatteDelomrader={utelatteDelomrader}
+          onDelomraderChange={handleDelomraderChange}
         />
+        {!brukerGrunnkretser && (
+          <BydelSelector
+            kommunerMedBydeler={kommunerMedBydeler}
+            bydelsByKommune={bydelsByKommune}
+            selection={selection}
+          />
+        )}
       </div>
 
       {/* Right column: preview + output settings */}
@@ -398,7 +486,7 @@ function Workspace({
         <SimplificationControl
           detailPercent={detailPercent}
           onChange={setDetailPercent}
-          estimatedBytes={exportResult?.blob.size ?? null}
+          estimatedBytes={exportResult ? exportResult.blob.size : buildOnDownload ? 'senere' : null}
         />
 
         <ExportPanel
@@ -406,11 +494,11 @@ function Workspace({
           format={format}
           onFormatChange={setFormat}
           onDownload={handleDownload}
-          disabled={!exportResult}
+          disabled={featureCount === 0}
           defaultFilenameStem={filenameStem}
-          extension={exportResult?.extension ?? null}
+          extension={featureCount > 0 ? format : null}
           granularity={effectiveGranularity}
-          featureCount={exportTarget.features.features.length}
+          featureCount={featureCount}
         />
       </div>
 

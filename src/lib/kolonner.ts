@@ -33,6 +33,19 @@ const BASE_KOLONNER: Record<string, KolonneInfo> = {
       'Bydelsnummer, 6 sifre som tekst: kommunenummer + 2 sifre (f.eks. «030101»). Fredrikstad har ingen offisielle bydelsnumre, så der er numrene laget av appen',
   },
   bydelnavn: { beskrivelse: 'Bydelens eller delområdets navn' },
+  grunnkretsnummer: {
+    beskrivelse:
+      'Grunnkretsnummer, 8 sifre som tekst: kommunenummer + 2 sifre delområde + 2 sifre krets (f.eks. «03012308»). Brukes i SSBs statistikk på grunnkretsnivå',
+    kilde: {
+      navn: 'SSB, Standard for delområde- og grunnkretsinndeling',
+      url: 'https://www.ssb.no/klass/klassifikasjoner/1',
+    },
+  },
+  grunnkretsnavn: { beskrivelse: 'Grunnkretsens navn (skrivemåte fra Kartverket)' },
+  delomradenummer: {
+    beskrivelse: 'Delområdenummer, 6 sifre som tekst: de 6 første sifrene i grunnkretsnummeret (SSB skriver det med «00» til slutt)',
+  },
+  delomradenavn: { beskrivelse: 'Delområdets navn' },
 }
 
 /** Describes one exported column: fylke/kommune/bydel fields, or a district kind's id/name field. */
@@ -59,5 +72,6 @@ export function nokkelKolonne(granularity: ExportGranularity): string {
   if (granularity === 'fylker') return 'fylkesnummer'
   if (granularity === 'kommuner') return 'kommunenummer'
   if (granularity === 'bydeler') return 'bydelnummer'
+  if (granularity === 'grunnkretser') return 'grunnkretsnummer'
   return DISTRIKT_KINDS[granularity].idField
 }

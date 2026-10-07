@@ -1,6 +1,6 @@
 import * as topojsonClient from 'topojson-client'
 import { topology as buildTopology } from 'topojson-server'
-import type { FeatureCollection } from 'geojson'
+import type { FeatureCollection, Position } from 'geojson'
 import type { GeometryCollection } from 'topojson-specification'
 import type { NorwayTopologyType } from '../hooks/useTopology'
 import { DISTRIKT_KINDS, toDistrikt } from './distrikter'
@@ -9,6 +9,7 @@ import type {
   AreaGeometry,
   BydelProperties,
   DistriktKind,
+  GrunnkretsProperties,
   ExportFormat,
   ExportGranularity,
   FylkeProperties,
@@ -80,10 +81,12 @@ export function buildExport(
     | FeatureCollection<AreaGeometry, FylkeProperties>
     | FeatureCollection<AreaGeometry, KommuneProperties>
     | FeatureCollection<AreaGeometry, BydelProperties>
-    | FeatureCollection<AreaGeometry, DistriktProperties>,
+    | FeatureCollection<AreaGeometry, DistriktProperties>
+    | FeatureCollection<AreaGeometry, GrunnkretsProperties>,
   granularity: ExportGranularity,
   format: ExportFormat,
 ): { blob: Blob; extension: string } {
+  features = withConsistentWinding(features)
   if (format === 'geojson') {
     const json = JSON.stringify(features)
     return { blob: new Blob([json], { type: 'application/geo+json' }), extension: 'geojson' }
@@ -92,6 +95,35 @@ export function buildExport(
   const topology = buildTopology({ [granularity]: features })
   const json = JSON.stringify(topology)
   return { blob: new Blob([json], { type: 'application/json' }), extension: 'topojson' }
+}
+
+/** Twice the signed area of a ring in lon/lat; positive when counter-clockwise. */
+function ringArea(ring: Position[]): number {
+  let area = 0
+  for (let i = 0, n = ring.length - 1; i < n; i++) area += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1]
+  return area
+}
+
+/**
+ * Every exterior ring clockwise and every hole counter-clockwise — the
+ * winding the bundled data uses, and what d3 expects. The detail slider can
+ * flip tiny islets (a few points, a few hundred m²) inside out, which tools
+ * that honour winding would then draw as covering the rest of the world.
+ */
+function withConsistentWinding<F extends FeatureCollection<AreaGeometry>>(collection: F): F {
+  const fixRing = (ring: Position[], exterior: boolean) =>
+    (exterior ? ringArea(ring) > 0 : ringArea(ring) < 0) ? [...ring].reverse() : ring
+  const fixPolygon = (polygon: Position[][]) => polygon.map((ring, i) => fixRing(ring, i === 0))
+  return {
+    ...collection,
+    features: collection.features.map((feature) => ({
+      ...feature,
+      geometry:
+        feature.geometry.type === 'Polygon'
+          ? { ...feature.geometry, coordinates: fixPolygon(feature.geometry.coordinates) }
+          : { ...feature.geometry, coordinates: feature.geometry.coordinates.map(fixPolygon) },
+    })),
+  }
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {

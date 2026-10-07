@@ -3,7 +3,8 @@ import { useId } from 'react'
 interface SimplificationControlProps {
   detailPercent: number
   onChange: (value: number) => void
-  estimatedBytes: number | null
+  /** Size of the download, 'senere' when it is only built on download, or null when nothing is selected. */
+  estimatedBytes: number | 'senere' | null
 }
 
 function formatBytes(bytes: number): string {
@@ -47,7 +48,11 @@ export function SimplificationControl({ detailPercent, onChange, estimatedBytes 
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
         Estimert filstørrelse for valgt utvalg:{' '}
         <span className="font-medium text-slate-900 dark:text-slate-100">
-          {estimatedBytes === null ? 'velg minst én kommune' : formatBytes(estimatedBytes)}
+          {estimatedBytes === null
+            ? 'velg minst én kommune'
+            : estimatedBytes === 'senere'
+              ? 'beregnes ved nedlasting (stort utvalg)'
+              : formatBytes(estimatedBytes)}
         </span>
       </p>
     </div>

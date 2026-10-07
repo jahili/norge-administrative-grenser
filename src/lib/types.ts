@@ -57,7 +57,29 @@ export interface BydelProperties {
   kommunenummer: string
 }
 
+/** A grunnkrets as stored in the per-fylke files (src/assets/grunnkretser/). */
+export interface GrunnkretsFilProperties {
+  /** 8 digits: kommunenummer + 2-digit delområde + 2-digit krets. */
+  grunnkretsnummer: string
+  grunnkretsnavn: string
+  /** The first 6 digits of grunnkretsnummer. */
+  delomradenummer: string
+  delomradenavn: string
+  kommunenummer: string
+}
+
+/** A grunnkrets as exported: the file's fields plus kommune- and fylke-level fields
+ *  (and the grouping district's, when grouping by one) joined from the main topology. */
+export interface GrunnkretsProperties extends GrunnkretsFilProperties {
+  kommunenavn: string
+  kommunenavnOffisielt: string
+  fylkesnummer: string
+  fylkesnavn: string
+  fylkesnavnOffisielt: string
+  [distriktField: string]: string
+}
+
 export type ExportFormat = 'geojson' | 'topojson'
 
-/** Whether the export contains fylke polygons, kommune subdivisions, bydeler, or districts. */
-export type ExportGranularity = 'fylker' | 'kommuner' | 'bydeler' | DistriktKind
+/** Whether the export contains fylker, kommuner, bydeler, grunnkretser, or districts. */
+export type ExportGranularity = 'fylker' | 'kommuner' | 'bydeler' | 'grunnkretser' | DistriktKind

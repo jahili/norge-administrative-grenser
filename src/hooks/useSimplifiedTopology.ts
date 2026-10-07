@@ -23,13 +23,19 @@ import type { NorwayTopologyType } from './useTopology'
  * returns the maximum weight and p=1 returns the minimum. We therefore map
  * detailPercent directly to p (not 1-p) to get the intended behaviour.
  */
-export function useSimplifiedTopology(topology: NorwayTopologyType, detailPercent: number): NorwayTopologyType {
+export function useSimplifiedTopology(
+  topology: NorwayTopologyType,
+  detailPercent: number,
+): { topology: NorwayTopologyType; minWeight: number } {
   const presimplified = useMemo(() => topojsonSimplify.presimplify(topology), [topology])
 
+  // `minWeight` is returned too, so the separately loaded grunnkrets files can
+  // be simplified with the same threshold (weights are planar areas in the
+  // same lon/lat units, so they compare across files).
   return useMemo(() => {
-    if (detailPercent >= 100) return presimplified
+    if (detailPercent >= 100) return { topology: presimplified, minWeight: 0 }
     const quantile = detailPercent / 100
     const minWeight = topojsonSimplify.quantile(presimplified, quantile)
-    return topojsonSimplify.simplify(presimplified, minWeight)
+    return { topology: topojsonSimplify.simplify(presimplified, minWeight), minWeight }
   }, [presimplified, detailPercent])
 }

@@ -2,18 +2,21 @@ import { useEffect, useMemo, useRef } from 'react'
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet'
 import type { Map as LeafletMap } from 'leaflet'
 import type { Feature, FeatureCollection, Position } from 'geojson'
-import type { AreaGeometry, BydelProperties, FylkeProperties, KommuneProperties } from '../lib/types'
+import type { AreaGeometry, BydelProperties, FylkeProperties, GrunnkretsProperties, KommuneProperties } from '../lib/types'
 import { toDistrikt } from '../lib/distrikter'
 import type { DistriktProperties } from '../lib/distrikter'
 import type { Theme } from '../hooks/useTheme'
 
-type SelectedProperties = KommuneProperties | BydelProperties
+type SelectedProperties = KommuneProperties | BydelProperties | GrunnkretsProperties
 type ContextProperties = FylkeProperties | DistriktProperties
 
+// Bydeler and grunnkretser also carry kommunenummer, so check them first.
 function featureId(props: SelectedProperties): string {
+  if ('grunnkretsnummer' in props) return props.grunnkretsnummer
   return 'bydelnummer' in props ? props.bydelnummer : props.kommunenummer
 }
 function featureLabel(props: SelectedProperties): string {
+  if ('grunnkretsnummer' in props) return `${props.grunnkretsnavn} (${props.kommunenavn})`
   return 'bydelnavn' in props ? props.bydelnavn : props.kommunenavn
 }
 function contextLabel(props: ContextProperties): string {
@@ -101,6 +104,9 @@ export function MapPreview({
         center={NORWAY_CENTER}
         zoom={NORWAY_ZOOM}
         scrollWheelZoom
+        // Canvas rather than one SVG element per polygon: grunnkretser can be
+        // thousands of features.
+        preferCanvas
         className="h-[420px] w-full rounded-sm border border-slate-200 dark:border-slate-800"
         ref={mapRef}
         aria-label="Forhåndsvisning av valgte områder på kart"
