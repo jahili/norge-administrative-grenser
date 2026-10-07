@@ -18,6 +18,7 @@ function levelWords(granularity: ExportGranularity): { entall: string; flertall:
   if (granularity === 'kommuner') return { entall: 'kommune', flertall: 'kommuner', artikkel: 'én' }
   if (granularity === 'bydeler') return { entall: 'bydel', flertall: 'bydeler', artikkel: 'én' }
   if (granularity === 'grunnkretser') return { entall: 'grunnkrets', flertall: 'grunnkretser', artikkel: 'én' }
+  if (granularity === 'delomrader') return { entall: 'delområde', flertall: 'delområder', artikkel: 'ett' }
   return DISTRIKT_KINDS[granularity]
 }
 

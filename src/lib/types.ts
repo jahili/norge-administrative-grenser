@@ -68,6 +68,27 @@ export interface GrunnkretsFilProperties {
   kommunenummer: string
 }
 
+/** A delområde as stored in the per-fylke files: its grunnkretser merged. */
+export interface DelomradeFilProperties {
+  /** 6 digits: kommunenummer + 2 digits. */
+  delomradenummer: string
+  delomradenavn: string
+  kommunenummer: string
+}
+
+/** Kommune- and fylke-level fields joined onto grunnkretser and delområder at export
+ *  (plus the grouping district's id and name, when grouping by one). */
+export interface KommuneFelter {
+  kommunenavn: string
+  kommunenavnOffisielt: string
+  fylkesnummer: string
+  fylkesnavn: string
+  fylkesnavnOffisielt: string
+  [distriktField: string]: string
+}
+
+export type DelomradeProperties = DelomradeFilProperties & KommuneFelter
+
 /** A grunnkrets as exported: the file's fields plus kommune- and fylke-level fields
  *  (and the grouping district's, when grouping by one) joined from the main topology. */
 export interface GrunnkretsProperties extends GrunnkretsFilProperties {
@@ -82,4 +103,7 @@ export interface GrunnkretsProperties extends GrunnkretsFilProperties {
 export type ExportFormat = 'geojson' | 'topojson'
 
 /** Whether the export contains fylker, kommuner, bydeler, grunnkretser, or districts. */
-export type ExportGranularity = 'fylker' | 'kommuner' | 'bydeler' | 'grunnkretser' | DistriktKind
+export type ExportGranularity = 'fylker' | 'kommuner' | 'bydeler' | 'grunnkretser' | 'delomrader' | DistriktKind
+
+/** The two levels below kommune that come from the grunnkrets files. */
+export type GrunnkretsNivå = 'grunnkretser' | 'delomrader'

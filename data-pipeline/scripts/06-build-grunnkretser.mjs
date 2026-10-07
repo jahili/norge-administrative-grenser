@@ -5,12 +5,15 @@
 // without slowing down everything else, so they live in separate files that
 // the app only fetches for the fylker a user actually wants grunnkretser in.
 //
-// Each file holds two objects sharing one set of arcs:
+// Each file holds four objects sharing one set of arcs:
 //   - grunnkretser:              as published, extending out to the
 //                                havgrense like the kommune borders do
 //   - grunnkretserUtenHavgrense: clipped to the coastline (the same land
 //                                mask as kommunerUtenHavgrense), so the app's
 //                                havgrense toggle works for grunnkretser too
+//   - delomrader / delomraderUtenHavgrense: the grunnkretser merged per
+//                                delområde (topojson-client's mergeArcs), so
+//                                delområder share borders exactly with them
 //
 // Properties: grunnkretsnummer (8 digits: kommunenummer + delområde + krets),
 // grunnkretsnavn, delomradenummer (the first 6 digits), delomradenavn,
@@ -49,6 +52,7 @@ import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const mapshaper = require('mapshaper')
+const topojsonClient = require('topojson-client')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rawDir = path.join(__dirname, '..', 'raw')
@@ -158,6 +162,38 @@ console.log(
   `[done] ${features.length - utenCount} grunnkretser lie entirely at sea and are left out of grunnkretserUtenHavgrense`,
 )
 
+// Delområder: the grunnkretser merged per delområde. As in 05-add-distrikter,
+// mergeArcs runs on a 2D copy of the arcs, because it cannot stitch arcs that
+// carry presimplify weights; the result only references arc indices.
+const national2d = { ...national, arcs: national.arcs.map((arc) => arc.map(([x, y]) => [x, y])) }
+for (const [source, target] of [
+  ['grunnkretser', 'delomrader'],
+  ['grunnkretserUtenHavgrense', 'delomraderUtenHavgrense'],
+]) {
+  const groups = new Map()
+  for (const geometry of national.objects[source].geometries) {
+    const group = groups.get(geometry.properties.delomradenummer) ?? []
+    group.push(geometry)
+    groups.set(geometry.properties.delomradenummer, group)
+  }
+  national.objects[target] = {
+    type: 'GeometryCollection',
+    geometries: [...groups.values()]
+      .map((group) => {
+        const { delomradenummer, delomradenavn, kommunenummer, fylkesnummer } = group[0].properties
+        return {
+          ...topojsonClient.mergeArcs(national2d, group),
+          properties: { delomradenummer, delomradenavn, kommunenummer, fylkesnummer },
+        }
+      })
+      .sort((a, b) => a.properties.delomradenummer.localeCompare(b.properties.delomradenummer)),
+  }
+}
+console.log(
+  `[done] merged grunnkretser into ${national.objects.delomrader.geometries.length} delområder ` +
+    `(${national.objects.delomraderUtenHavgrense.geometries.length} without havgrense)`,
+)
+
 // Split the national topology per fylke, keeping only the arcs each file uses.
 await rm(outDir, { recursive: true, force: true })
 await mkdir(outDir, { recursive: true })
@@ -168,7 +204,11 @@ for (const fylkesnummer of fylker) {
   const file = path.join(outDir, `${fylkesnummer}.topojson`)
   await writeFile(file, JSON.stringify(topology))
   const { size } = await stat(file)
-  index[fylkesnummer] = { grunnkretser: topology.objects.grunnkretser.geometries.length, bytes: size }
+  index[fylkesnummer] = {
+    grunnkretser: topology.objects.grunnkretser.geometries.length,
+    delomrader: topology.objects.delomrader.geometries.length,
+    bytes: size,
+  }
 }
 await writeFile(path.join(outDir, 'index.json'), JSON.stringify(index, null, 2))
 

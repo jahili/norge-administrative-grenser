@@ -1,5 +1,13 @@
 import { DISTRIKT_KINDS, kommuneGruppeId } from './distrikter'
-import type { BydelProperties, DistriktKind, FylkeProperties, GruppeKind, KommuneGruppe, KommuneProperties } from './types'
+import type {
+  BydelProperties,
+  DistriktKind,
+  FylkeProperties,
+  GrunnkretsNivå,
+  GruppeKind,
+  KommuneGruppe,
+  KommuneProperties,
+} from './types'
 
 /** Norwegian names contain spaces, slashes, æøå and Sami letters (á, š, …) —
  * keep every letter (valid in filenames on every OS we care about) but
@@ -113,13 +121,15 @@ export function distriktSelectionFilenameStem(
 }
 
 /**
- * Builds a filename stem for a grunnkrets export, from the kommuner they are in:
+ * Builds a filename stem for a grunnkrets or delområde export, from the
+ * kommuner they are in (shown for grunnkretser; delområder say "delområder"):
  *  - one kommune                         → "oslo-grunnkretser"
  *  - every kommune in one fylke/district → "akershus-grunnkretser"
  *  - anything else                       → "grunnkretser-i-n-kommuner"
  * "-utvalg" is added when some delområder are left out.
  */
 export function grunnkretsSelectionFilenameStem(
+  nivå: GrunnkretsNivå,
   selectedKommuner: KommuneProperties[],
   kind: GruppeKind,
   groups: KommuneGruppe[],
@@ -127,11 +137,12 @@ export function grunnkretsSelectionFilenameStem(
   someDelomraderLeftOut: boolean,
 ): string {
   const kommuneStem = selectionFilenameStem(selectedKommuner, kind, groups, kommunerByGroup)
+  const ord = nivå === 'delomrader' ? 'delområder' : 'grunnkretser'
   const stem =
     selectedKommuner.length === 1
-      ? `${kommuneStem}-grunnkretser`
+      ? `${kommuneStem}-${ord}`
       : kommuneStem.endsWith('-kommuner')
-        ? `${kommuneStem.slice(0, -'-kommuner'.length)}-grunnkretser`
-        : `grunnkretser-i-${selectedKommuner.length}-kommuner`
+        ? `${kommuneStem.slice(0, -'-kommuner'.length)}-${ord}`
+        : `${ord}-i-${selectedKommuner.length}-kommuner`
   return someDelomraderLeftOut ? `${stem}-utvalg` : stem
 }

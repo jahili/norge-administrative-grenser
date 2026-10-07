@@ -10,6 +10,7 @@ import type {
   BydelProperties,
   DistriktKind,
   GrunnkretsProperties,
+  DelomradeProperties,
   ExportFormat,
   ExportGranularity,
   FylkeProperties,
@@ -82,7 +83,8 @@ export function buildExport(
     | FeatureCollection<AreaGeometry, KommuneProperties>
     | FeatureCollection<AreaGeometry, BydelProperties>
     | FeatureCollection<AreaGeometry, DistriktProperties>
-    | FeatureCollection<AreaGeometry, GrunnkretsProperties>,
+    | FeatureCollection<AreaGeometry, GrunnkretsProperties>
+    | FeatureCollection<AreaGeometry, DelomradeProperties>,
   granularity: ExportGranularity,
   format: ExportFormat,
 ): { blob: Blob; extension: string } {

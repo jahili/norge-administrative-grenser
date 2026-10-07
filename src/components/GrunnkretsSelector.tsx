@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { GRUNNKRETS_INDEX } from '../lib/grunnkretser'
 import type { GrunnkretsState } from '../hooks/useGrunnkretser'
-import type { KommuneProperties } from '../lib/types'
+import type { GrunnkretsNivå, KommuneProperties } from '../lib/types'
 
 export interface Delomrade {
   delomradenummer: string
@@ -14,6 +14,9 @@ interface GrunnkretsSelectorProps {
   kommuner: KommuneProperties[]
   enabled: boolean
   onEnabledChange: (enabled: boolean) => void
+  /** Download every grunnkrets, or the grunnkretser merged per delområde. */
+  nivå: GrunnkretsNivå
+  onNivåChange: (nivå: GrunnkretsNivå) => void
   state: GrunnkretsState
   /** Delområder per kommune, once the kommune's fylke file has loaded. */
   delomraderByKommune: Map<string, Delomrade[]>
@@ -30,14 +33,17 @@ function formatMB(bytes: number): string {
 }
 
 /**
- * Step 3 alternative to bydeler: download every grunnkrets in the selected
- * kommuner instead of the kommuner themselves, optionally leaving out
- * delområder. Grunnkretser are fetched per fylke only once this is switched on.
+ * Step 3 alternative to bydeler: download the grunnkretser — or delområder —
+ * in the selected kommuner instead of the kommuner themselves, optionally
+ * leaving out delområder. The grunnkrets files (which hold both levels) are
+ * fetched per fylke only once this is switched on.
  */
 export function GrunnkretsSelector({
   kommuner,
   enabled,
   onEnabledChange,
+  nivå,
+  onNivåChange,
   state,
   delomraderByKommune,
   utelatteDelomrader,
@@ -51,7 +57,9 @@ export function GrunnkretsSelector({
 
   return (
     <fieldset className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <legend className="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">Grunnkretser (valgfritt)</legend>
+      <legend className="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+        Grunnkretser og delområder (valgfritt)
+      </legend>
 
       <label className="mt-1 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
         <input
@@ -61,10 +69,12 @@ export function GrunnkretsSelector({
           onChange={(e) => onEnabledChange(e.target.checked)}
         />
         <span>
-          Last ned grunnkretsene i {kommuner.length === 1 ? kommuner[0].kommunenavn : `de ${kommuner.length} valgte kommunene`} i
-          stedet for kommunene
+          Last ned grunnkretser eller delområder i{' '}
+          {kommuner.length === 1 ? kommuner[0].kommunenavn : `de ${kommuner.length} valgte kommunene`} i stedet for
+          kommunene
           <span className="block text-xs text-slate-500 dark:text-slate-400">
-            Grunnkretser er SSBs minste statistiske enheter. De hentes per fylke ved behov (
+            Grunnkretser er SSBs minste statistiske enheter; et delområde er en gruppe grunnkretser. De hentes per
+            fylke ved behov (
             {fylker.length === 1 ? '1 fylke' : `${fylker.length} fylker`}, ca. {formatMB(bytes)}).
           </span>
         </span>
@@ -72,6 +82,25 @@ export function GrunnkretsSelector({
 
       {enabled && (
         <div className="mt-3 flex flex-col gap-3">
+          <div role="radiogroup" aria-label="Nivå" className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+            {(
+              [
+                ['grunnkretser', 'Grunnkretser'],
+                ['delomrader', 'Delområder'],
+              ] as const
+            ).map(([value, label]) => (
+              <label key={value} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input
+                  type="radio"
+                  name="grunnkrets-niva"
+                  className="h-4 w-4 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
+                  checked={nivå === value}
+                  onChange={() => onNivåChange(value)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
           {state.loading.length > 0 && (
             <p role="status" className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700 dark:border-slate-700 dark:border-t-teal-400" />

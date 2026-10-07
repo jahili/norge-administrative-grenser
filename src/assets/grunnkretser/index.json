@@ -1,62 +1,77 @@
 {
   "11": {
     "grunnkretser": 966,
-    "bytes": 861752
+    "delomrader": 118,
+    "bytes": 918596
   },
   "15": {
     "grunnkretser": 765,
-    "bytes": 839868
+    "delomrader": 112,
+    "bytes": 895871
   },
   "18": {
     "grunnkretser": 1098,
-    "bytes": 1631758
+    "delomrader": 108,
+    "bytes": 1712885
   },
   "31": {
     "grunnkretser": 686,
-    "bytes": 637839
+    "delomrader": 87,
+    "bytes": 681148
   },
   "32": {
     "grunnkretser": 1527,
-    "bytes": 1235567
+    "delomrader": 146,
+    "bytes": 1306105
   },
   "33": {
     "grunnkretser": 695,
-    "bytes": 707970
+    "delomrader": 72,
+    "bytes": 741599
   },
   "34": {
     "grunnkretser": 1576,
-    "bytes": 1742544
+    "delomrader": 179,
+    "bytes": 1828961
   },
   "39": {
     "grunnkretser": 571,
-    "bytes": 511386
+    "delomrader": 75,
+    "bytes": 546351
   },
   "40": {
     "grunnkretser": 612,
-    "bytes": 617485
+    "delomrader": 70,
+    "bytes": 650965
   },
   "42": {
     "grunnkretser": 885,
-    "bytes": 975636
+    "delomrader": 96,
+    "bytes": 1025343
   },
   "46": {
     "grunnkretser": 1623,
-    "bytes": 1817190
+    "delomrader": 165,
+    "bytes": 1910383
   },
   "50": {
     "grunnkretser": 1543,
-    "bytes": 1783258
+    "delomrader": 144,
+    "bytes": 1869346
   },
   "55": {
     "grunnkretser": 627,
-    "bytes": 775528
+    "delomrader": 76,
+    "bytes": 814960
   },
   "56": {
     "grunnkretser": 361,
-    "bytes": 720079
+    "delomrader": 39,
+    "bytes": 759451
   },
   "03": {
     "grunnkretser": 591,
-    "bytes": 361224
+    "delomrader": 60,
+    "bytes": 388866
   }
 }

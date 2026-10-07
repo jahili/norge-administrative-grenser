@@ -73,5 +73,6 @@ export function nokkelKolonne(granularity: ExportGranularity): string {
   if (granularity === 'kommuner') return 'kommunenummer'
   if (granularity === 'bydeler') return 'bydelnummer'
   if (granularity === 'grunnkretser') return 'grunnkretsnummer'
+  if (granularity === 'delomrader') return 'delomradenummer'
   return DISTRIKT_KINDS[granularity].idField
 }

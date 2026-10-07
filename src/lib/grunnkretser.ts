@@ -4,7 +4,17 @@ import type { Feature, FeatureCollection } from 'geojson'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import grunnkretsIndex from '../assets/grunnkretser/index.json'
 import { DISTRIKT_KINDS } from './distrikter'
-import type { AreaGeometry, GruppeKind, GrunnkretsFilProperties, GrunnkretsProperties, KommuneProperties } from './types'
+import type {
+  AreaGeometry,
+  DelomradeFilProperties,
+  DelomradeProperties,
+  GruppeKind,
+  GrunnkretsFilProperties,
+  GrunnkretsNivå,
+  GrunnkretsProperties,
+  KommuneFelter,
+  KommuneProperties,
+} from './types'
 
 /**
  * Grunnkretser live in one file per fylke (built by data:grunnkretser) and are
@@ -14,6 +24,8 @@ import type { AreaGeometry, GruppeKind, GrunnkretsFilProperties, GrunnkretsPrope
 export type GrunnkretsTopology = Topology<{
   grunnkretser: GeometryCollection<GrunnkretsFilProperties>
   grunnkretserUtenHavgrense: GeometryCollection<GrunnkretsFilProperties>
+  delomrader: GeometryCollection<DelomradeFilProperties>
+  delomraderUtenHavgrense: GeometryCollection<DelomradeFilProperties>
 }>
 
 /** Hashed asset URL per fylkesnummer. */
@@ -23,8 +35,8 @@ const URLS: Record<string, string> = Object.fromEntries(
   ).map(([file, url]) => [file.match(/(\d{2})\.topojson$/)![1], url]),
 )
 
-/** Number of grunnkretser and file size per fylkesnummer. */
-export const GRUNNKRETS_INDEX: Record<string, { grunnkretser: number; bytes: number }> = grunnkretsIndex
+/** Number of grunnkretser and delområder, and file size, per fylkesnummer. */
+export const GRUNNKRETS_INDEX: Record<string, { grunnkretser: number; delomrader: number; bytes: number }> = grunnkretsIndex
 
 const cache = new Map<string, Promise<GrunnkretsTopology>>()
 
@@ -50,13 +62,58 @@ export function loadGrunnkretser(fylkesnummer: string): Promise<GrunnkretsTopolo
 }
 
 /**
- * The grunnkretser in `kommunenumre` (minus excluded delområder) as one
- * FeatureCollection, simplified with the same weight threshold as the main
- * topology so the detail slider affects both alike. Kommune- and fylke-level
- * fields — and, when grouping by a district kind, that district — are joined
- * from the main topology rather than stored in every grunnkrets file.
+ * The grunnkretser or delområder in `kommunenumre` (minus excluded
+ * delområder) as one FeatureCollection, simplified with the same weight
+ * threshold as the main topology so the detail slider affects both alike.
+ * Kommune- and fylke-level fields — and, when grouping by a district kind,
+ * that district — are joined from the main topology rather than stored in
+ * every grunnkrets file.
  */
 export function grunnkretsFeatures(
+  nivå: 'grunnkretser',
+  ...args: FeatureArgs
+): FeatureCollection<AreaGeometry, GrunnkretsProperties>
+export function grunnkretsFeatures(
+  nivå: 'delomrader',
+  ...args: FeatureArgs
+): FeatureCollection<AreaGeometry, DelomradeProperties>
+export function grunnkretsFeatures(
+  nivå: GrunnkretsNivå,
+  ...[topologies, medHavgrense, minWeight, kommunenumre, utelatteDelomrader, kommuneByNummer, gruppeKind]: FeatureArgs
+): FeatureCollection<AreaGeometry, GrunnkretsProperties | DelomradeProperties> {
+  const distrikt = gruppeKind === 'fylker' ? null : DISTRIKT_KINDS[gruppeKind]
+  const kommuneFelter = (kommune: KommuneProperties): KommuneFelter => ({
+    kommunenavn: kommune.kommunenavn,
+    kommunenavnOffisielt: kommune.kommunenavnOffisielt,
+    fylkesnummer: kommune.fylkesnummer,
+    fylkesnavn: kommune.fylkesnavn,
+    fylkesnavnOffisielt: kommune.fylkesnavnOffisielt,
+    ...(distrikt && {
+      [distrikt.idField]: kommune[distrikt.idField],
+      [distrikt.nameField]: kommune[distrikt.nameField],
+    }),
+  })
+  const objectName = `${nivå}${medHavgrense ? '' : 'UtenHavgrense'}` as const
+  const features: Feature<AreaGeometry, GrunnkretsProperties | DelomradeProperties>[] = []
+  for (const presimplified of topologies) {
+    const topology = simplified(presimplified, minWeight)
+    const collection = topojsonClient.feature(topology, topology.objects[objectName]) as FeatureCollection<
+      AreaGeometry,
+      GrunnkretsFilProperties | DelomradeFilProperties
+    >
+    for (const feature of collection.features) {
+      const p = feature.properties
+      if (!kommunenumre.has(p.kommunenummer) || utelatteDelomrader.has(p.delomradenummer)) continue
+      const kommune = kommuneByNummer.get(p.kommunenummer)!
+      // The file's own fields first (grunnkretsnummer … kommunenummer), then the joined ones.
+      features.push({ ...feature, properties: { ...p, ...kommuneFelter(kommune) } })
+    }
+  }
+  return { type: 'FeatureCollection', features }
+}
+
+/** The arguments after `nivå`, shared by both levels. */
+export type FeatureArgs = [
   topologies: GrunnkretsTopology[],
   medHavgrense: boolean,
   minWeight: number,
@@ -64,40 +121,7 @@ export function grunnkretsFeatures(
   utelatteDelomrader: Set<string>,
   kommuneByNummer: Map<string, KommuneProperties>,
   gruppeKind: GruppeKind,
-): FeatureCollection<AreaGeometry, GrunnkretsProperties> {
-  const distrikt = gruppeKind === 'fylker' ? null : DISTRIKT_KINDS[gruppeKind]
-  const features: Feature<AreaGeometry, GrunnkretsProperties>[] = []
-  for (const presimplified of topologies) {
-    const topology = simplified(presimplified, minWeight)
-    const object = medHavgrense ? topology.objects.grunnkretser : topology.objects.grunnkretserUtenHavgrense
-    const collection = topojsonClient.feature(topology, object) as FeatureCollection<AreaGeometry, GrunnkretsFilProperties>
-    for (const feature of collection.features) {
-      const p = feature.properties
-      if (!kommunenumre.has(p.kommunenummer) || utelatteDelomrader.has(p.delomradenummer)) continue
-      const kommune = kommuneByNummer.get(p.kommunenummer)!
-      features.push({
-        ...feature,
-        properties: {
-          grunnkretsnummer: p.grunnkretsnummer,
-          grunnkretsnavn: p.grunnkretsnavn,
-          delomradenummer: p.delomradenummer,
-          delomradenavn: p.delomradenavn,
-          kommunenummer: p.kommunenummer,
-          kommunenavn: kommune.kommunenavn,
-          kommunenavnOffisielt: kommune.kommunenavnOffisielt,
-          fylkesnummer: kommune.fylkesnummer,
-          fylkesnavn: kommune.fylkesnavn,
-          fylkesnavnOffisielt: kommune.fylkesnavnOffisielt,
-          ...(distrikt && {
-            [distrikt.idField]: kommune[distrikt.idField],
-            [distrikt.nameField]: kommune[distrikt.nameField],
-          }),
-        },
-      })
-    }
-  }
-  return { type: 'FeatureCollection', features }
-}
+]
 
 const simplifiedCache = new WeakMap<GrunnkretsTopology, { minWeight: number; topology: GrunnkretsTopology }>()
 

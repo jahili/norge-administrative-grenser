@@ -2,21 +2,31 @@ import { useEffect, useMemo, useRef } from 'react'
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet'
 import type { Map as LeafletMap } from 'leaflet'
 import type { Feature, FeatureCollection, Position } from 'geojson'
-import type { AreaGeometry, BydelProperties, FylkeProperties, GrunnkretsProperties, KommuneProperties } from '../lib/types'
+import type {
+  AreaGeometry,
+  BydelProperties,
+  DelomradeProperties,
+  FylkeProperties,
+  GrunnkretsProperties,
+  KommuneProperties,
+} from '../lib/types'
 import { toDistrikt } from '../lib/distrikter'
 import type { DistriktProperties } from '../lib/distrikter'
 import type { Theme } from '../hooks/useTheme'
 
-type SelectedProperties = KommuneProperties | BydelProperties | GrunnkretsProperties
+type SelectedProperties = KommuneProperties | BydelProperties | GrunnkretsProperties | DelomradeProperties
 type ContextProperties = FylkeProperties | DistriktProperties
 
-// Bydeler and grunnkretser also carry kommunenummer, so check them first.
+// Finer levels also carry the coarser levels' numbers (a grunnkrets has a
+// delomradenummer and a kommunenummer), so check the finest level first.
 function featureId(props: SelectedProperties): string {
   if ('grunnkretsnummer' in props) return props.grunnkretsnummer
+  if ('delomradenummer' in props) return props.delomradenummer
   return 'bydelnummer' in props ? props.bydelnummer : props.kommunenummer
 }
 function featureLabel(props: SelectedProperties): string {
   if ('grunnkretsnummer' in props) return `${props.grunnkretsnavn} (${props.kommunenavn})`
+  if ('delomradenummer' in props) return `${props.delomradenavn} (${props.kommunenavn})`
   return 'bydelnavn' in props ? props.bydelnavn : props.kommunenavn
 }
 function contextLabel(props: ContextProperties): string {

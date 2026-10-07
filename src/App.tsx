@@ -36,6 +36,7 @@ import {
   grunnkretsSelectionFilenameStem,
 } from './lib/filename'
 import { delomraderByKommune, grunnkretsFeatures } from './lib/grunnkretser'
+import type { FeatureArgs } from './lib/grunnkretser'
 import { DISTRIKT_KINDS, toDistrikt } from './lib/distrikter'
 import type { DistriktProperties } from './lib/distrikter'
 import type {
@@ -46,6 +47,8 @@ import type {
   DistriktKind,
   FylkeProperties,
   GruppeKind,
+  DelomradeProperties,
+  GrunnkretsNivå,
   GrunnkretsProperties,
   KommuneGruppe,
   KommuneProperties,
@@ -175,6 +178,7 @@ function Workspace({
   const [inndeling, setInndeling] = useState<Inndeling>('administrativ')
   const [grunnkretsModus, setGrunnkretsModus] = useState(false)
   const [utelatteDelomrader, setUtelatteDelomrader] = useState<Set<string>>(new Set())
+  const [grunnkretsNivå, setGrunnkretsNivå] = useState<GrunnkretsNivå>('grunnkretser')
 
   // Kommuner are grouped by fylke or by one of the district kinds. Each
   // grouping keeps its own selection, so switching inndeling back and forth
@@ -259,21 +263,35 @@ function Workspace({
     return merged
   }, [grunnkretsState.topologies])
 
-  const selectedGrunnkretsFeatures = useMemo<FeatureCollection<AreaGeometry, GrunnkretsProperties>>(
-    () =>
-      brukerGrunnkretser
-        ? grunnkretsFeatures(
-            [...grunnkretsState.topologies.values()],
-            medHavgrense,
-            minWeight,
-            selection.selectedKommuner,
-            utelatteDelomrader,
-            kommuneByNummer,
-            gruppeKind,
-          )
-        : { type: 'FeatureCollection', features: [] },
-    [brukerGrunnkretser, grunnkretsState.topologies, medHavgrense, minWeight, selection.selectedKommuner, utelatteDelomrader, kommuneByNummer, gruppeKind],
-  )
+  // Grunnkretser or delområder, whichever level is chosen.
+  const selectedGrunnkretsFeatures = useMemo<
+    | { nivå: 'grunnkretser'; features: FeatureCollection<AreaGeometry, GrunnkretsProperties> }
+    | { nivå: 'delomrader'; features: FeatureCollection<AreaGeometry, DelomradeProperties> }
+  >(() => {
+    const args: FeatureArgs = [
+      [...grunnkretsState.topologies.values()],
+      medHavgrense,
+      minWeight,
+      selection.selectedKommuner,
+      utelatteDelomrader,
+      kommuneByNummer,
+      gruppeKind,
+    ]
+    if (!brukerGrunnkretser) return { nivå: 'grunnkretser', features: { type: 'FeatureCollection', features: [] } }
+    return grunnkretsNivå === 'delomrader'
+      ? { nivå: 'delomrader', features: grunnkretsFeatures('delomrader', ...args) }
+      : { nivå: 'grunnkretser', features: grunnkretsFeatures('grunnkretser', ...args) }
+  }, [
+    brukerGrunnkretser,
+    grunnkretsNivå,
+    grunnkretsState.topologies,
+    medHavgrense,
+    minWeight,
+    selection.selectedKommuner,
+    utelatteDelomrader,
+    kommuneByNummer,
+    gruppeKind,
+  ])
   const someDelomraderLeftOut = valgteKommuner.some((k) =>
     (delomrader.get(k.kommunenummer) ?? []).some((d) => utelatteDelomrader.has(d.delomradenummer)),
   )
@@ -300,7 +318,7 @@ function Workspace({
   // Granularity follows the deepest selection level the user has made —
   // no separate radio button needed.
   const effectiveGranularity: ExportGranularity = (() => {
-    if (brukerGrunnkretser) return 'grunnkretser'
+    if (brukerGrunnkretser) return grunnkretsNivå
     if (selection.selectedBydeler.size > 0) return 'bydeler'
     if (selection.selectedKommuner.size > 0) return 'kommuner'
     if (selection.selectedGroups.size > 0) return gruppeKind
@@ -312,9 +330,14 @@ function Workspace({
     | { granularity: 'kommuner'; features: FeatureCollection<AreaGeometry, KommuneProperties> }
     | { granularity: 'bydeler'; features: FeatureCollection<AreaGeometry, BydelProperties> }
     | { granularity: 'grunnkretser'; features: FeatureCollection<AreaGeometry, GrunnkretsProperties> }
+    | { granularity: 'delomrader'; features: FeatureCollection<AreaGeometry, DelomradeProperties> }
     | { granularity: DistriktKind; features: FeatureCollection<AreaGeometry, DistriktProperties> }
   >(() => {
-    if (effectiveGranularity === 'grunnkretser') return { granularity: 'grunnkretser', features: selectedGrunnkretsFeatures }
+    if (effectiveGranularity === 'grunnkretser' || effectiveGranularity === 'delomrader') {
+      return selectedGrunnkretsFeatures.nivå === 'delomrader'
+        ? { granularity: 'delomrader', features: selectedGrunnkretsFeatures.features }
+        : { granularity: 'grunnkretser', features: selectedGrunnkretsFeatures.features }
+    }
     if (effectiveGranularity === 'bydeler') return { granularity: 'bydeler', features: selectedBydelFeatures }
     if (effectiveGranularity === 'kommuner') return { granularity: 'kommuner', features: selectedFeatures }
     return contextAreas.kind === 'fylker'
@@ -339,7 +362,15 @@ function Workspace({
       case 'fylker':
         return fylkeSelectionFilenameStem(exportTarget.features.features.map((f) => f.properties))
       case 'grunnkretser':
-        return grunnkretsSelectionFilenameStem(valgteKommuner, gruppeKind, groups, kommunerByGroup, someDelomraderLeftOut)
+      case 'delomrader':
+        return grunnkretsSelectionFilenameStem(
+          exportTarget.granularity,
+          valgteKommuner,
+          gruppeKind,
+          groups,
+          kommunerByGroup,
+          someDelomraderLeftOut,
+        )
       case 'bydeler':
         return bydelSelectionFilenameStem(
           exportTarget.features.features.map((f) => f.properties),
@@ -365,8 +396,8 @@ function Workspace({
   // Map shows selected bydeler or kommuner with fill; the selected fylker or
   // districts are shown as outlines, or filled when they are the export target.
   const previewFeatures =
-    effectiveGranularity === 'grunnkretser'
-      ? selectedGrunnkretsFeatures
+    effectiveGranularity === 'grunnkretser' || effectiveGranularity === 'delomrader'
+      ? selectedGrunnkretsFeatures.features
       : effectiveGranularity === 'bydeler'
         ? selectedBydelFeatures
         : selectedFeatures
@@ -379,10 +410,14 @@ function Workspace({
       const { entall, flertall } = DISTRIKT_KINDS[gruppeKind]
       return n === 0 ? `Ingen ${flertall} valgt ennå.` : `${n} ${n === 1 ? entall : flertall} valgt.`
     }
-    if (effectiveGranularity === 'grunnkretser') {
-      const n = selectedGrunnkretsFeatures.features.length
+    if (effectiveGranularity === 'grunnkretser' || effectiveGranularity === 'delomrader') {
+      const n = selectedGrunnkretsFeatures.features.features.length
       if (grunnkretsState.loading.length > 0) return 'Laster grunnkretser …'
-      return `${n} grunnkrets${n === 1 ? '' : 'er'} i ${valgteKommuner.length} kommune${valgteKommuner.length === 1 ? '' : 'r'}.`
+      const nivåOrd =
+        effectiveGranularity === 'delomrader'
+          ? `delområde${n === 1 ? '' : 'r'}`
+          : `grunnkrets${n === 1 ? '' : 'er'}`
+      return `${n} ${nivåOrd} i ${valgteKommuner.length} kommune${valgteKommuner.length === 1 ? '' : 'r'}.`
     }
     if (effectiveGranularity === 'bydeler') {
       const n = selectedBydelFeatures.features.length
@@ -405,7 +440,7 @@ function Workspace({
     [exportTarget],
   )
   const dataExample = (() => {
-    if (effectiveGranularity === 'grunnkretser') return dataRows[0]
+    if (effectiveGranularity === 'grunnkretser' || effectiveGranularity === 'delomrader') return dataRows[0]
     const objectName =
       effectiveGranularity === 'fylker' || effectiveGranularity === 'kommuner' || effectiveGranularity === 'bydeler'
         ? effectiveGranularity
@@ -452,6 +487,8 @@ function Workspace({
           kommuner={valgteKommuner}
           enabled={grunnkretsModus}
           onEnabledChange={setGrunnkretsModus}
+          nivå={grunnkretsNivå}
+          onNivåChange={setGrunnkretsNivå}
           state={grunnkretsState}
           delomraderByKommune={delomrader}
           utelatteDelomrader={utelatteDelomrader}

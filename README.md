@@ -16,8 +16,9 @@ kart- og analyseverktøy.
   regioner**, **landsdeler**, **helseregioner**, **familievernregioner**, **barnevernsregioner**,
   **reiselivsregioner**, **samiske valgkretser** eller **sentralitet** i stedet for fylker — og
   velge kommuner og bydeler innenfor dem på samme måte
-- Laste ned **grunnkretser** (SSBs minste statistiske enheter, 14 126 i hele landet) for de valgte
-  kommunene, med mulighet til å utelate delområder
+- Laste ned **grunnkretser** (SSBs minste statistiske enheter, 14 126 i hele landet) eller
+  **delområder** (grupper av grunnkretser, 1 547) for de valgte kommunene, med mulighet til å utelate
+  delområder
 - Se utvalget på et kart før du laster ned
 - Velge om grensene skal **følge kystlinjen** eller strekke seg ut til
   **territorialgrensen i havet** («havgrensen»)
@@ -39,8 +40,8 @@ Alt skjer i nettleseren — ingen data sendes til noen server.
 2. **Velg kommuner** — kommunene i valgte fylker (eller distrikter) dukker opp, med søkefelt for store fylker.
    Kommuner med bydelsdata er merket med en liten prikk
 3. **Velg bydeler** (valgfritt) — vises bare når en valgt kommune har bydeler
-4. **Grunnkretser** (valgfritt) — kryss av for å laste ned grunnkretsene i de valgte kommunene i
-   stedet for kommunene, og utelat eventuelt delområder
+4. **Grunnkretser og delområder** (valgfritt) — kryss av for å laste ned grunnkretsene eller
+   delområdene i de valgte kommunene i stedet for kommunene, og utelat eventuelt delområder
 5. **Last ned** — velg format, juster filnavnet om du vil, og trykk på knappen
 
 ## Teknisk
@@ -85,8 +86,9 @@ navnefelt per inndeling (`politidistriktnummer`/`politidistriktnavn`, `distrikt1
 `landsdelnummer`/`landsdelnavn`, `helseregionnummer`/`helseregionnavn` osv., se `DISTRIKT_KINDS`
 i `src/lib/distrikter.ts`), så en kommuneeksport viser hvilke distrikter hver kommune hører til.
 
-Grunnkretsene ligger ikke i denne filen, men i én fil per fylke (`src/assets/grunnkretser/`,
-0,4–1,8 MB) som appen bare henter når noen slår på grunnkretser for kommuner i fylket. Resten av
+Grunnkretsene og delområdene ligger ikke i denne filen, men i én fil per fylke
+(`src/assets/grunnkretser/`, 0,4–1,9 MB) som appen bare henter når noen slår på grunnkretser for
+kommuner i fylket. Resten av
 appen blir dermed ikke tregere av dem. Grunnkretsene får kommune- og fylkesfeltene (og distriktet
 når man grupperer etter en inndeling) fra hovedfilen ved nedlasting, og forenkles med samme
 terskel som hovedfilen. Store utvalg (over 2 000 områder) bygges først når man trykker last ned.

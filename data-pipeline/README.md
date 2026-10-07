@@ -20,7 +20,7 @@ Dette kjører, i rekkefølge:
 | 3 | `data:topology` | Slår sammen til delt topologi, forenkler geometrien til ~20 % og skriver TopoJSON med presimplifiseringsdata |
 | 4 | `data:copy` | Kopierer resultatet til `src/assets/norge-grenser.topojson` |
 | 5 | `data:distrikter` | Merker kommunene med distriktene sine i elleve inndelinger (SSB, og DSB for 110), og legger til distriktlag slått sammen av kommunene, direkte i `src/assets/norge-grenser.topojson` |
-| 6 | `data:grunnkretser` | Bygger én grunnkretsfil per fylke (`src/assets/grunnkretser/<fylkesnummer>.topojson` + `index.json`), med og uten havgrense |
+| 6 | `data:grunnkretser` | Bygger én fil per fylke med grunnkretser og delområder (`src/assets/grunnkretser/<fylkesnummer>.topojson` + `index.json`), med og uten havgrense |
 
 `data-pipeline/raw/` og `data-pipeline/work/` er mellomlagre (gitignored —
 se `.gitignore`) og kan trygt slettes; de bygges på nytt neste gang pipelinen
@@ -99,7 +99,7 @@ kjøres.
   nytt bygg i oktober 2026 ga en byte-identisk fil.
 - **Grunnkretser (steg 6)**: 14 126 grunnkretser er for mye å legge i
   hovedfilen uten at hele appen blir tregere, så de ligger i én fil per fylke
-  (0,4–1,8 MB, totalt ~15 MB / ~4 MB komprimert) som appen bare henter når
+  (0,4–1,9 MB, totalt ~16 MB / ~4 MB komprimert) som appen bare henter når
   noen ber om grunnkretser. Kilden er Kartverkets «Statistiske enheter
   grunnkretser», hentet via Geonorges bestillings-API (datasettet har ingen
   fast nedlastingslenke), og delområdenavn fra SSBs klassifikasjon 1.
@@ -114,5 +114,9 @@ kjøres.
   legges i et nytt lag (`+ name=…`) — arealet i Ås og Årdal vokste 0,5–0,7 % —
   så klippingen gjøres i en egen kjøring. To grunnkretser (Feistein og
   Sjysletta) ligger helt i sjøen og finnes bare i varianten med havgrense.
+  Delområdene (1 547) er grunnkretsene slått sammen per delområde med
+  `mergeArcs`, som distriktene i steg 5, og deler derfor grenser nøyaktig med
+  grunnkretsene. SSBs 1 906 delområdekoder inkluderer 358 «uoppgitt»
+  (xxxx9900) og Svalbard.
   SSB lister i tillegg «Uoppgitt grunnkrets» (xxxx9999) per kommune og
   Svalbards tre grunnkretser; de har ingen geometri og er ikke med.
