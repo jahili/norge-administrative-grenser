@@ -35,14 +35,20 @@ Alt skjer i nettleseren — ingen data sendes til noen server.
 
 ## Slik bruker du appen
 
-1. **Velg fylker** — kryss av for de fylkene du er interessert i (eller bytt inndeling til
-   en annen inndeling øverst, f.eks. politidistrikter, så grupperes kommunene etter den i stedet)
-2. **Velg kommuner** — kommunene i valgte fylker (eller distrikter) dukker opp, med søkefelt for store fylker.
-   Kommuner med bydelsdata er merket med en liten prikk
-3. **Velg bydeler** (valgfritt) — vises bare når en valgt kommune har bydeler
-4. **Grunnkretser og delområder** (valgfritt) — kryss av for å laste ned grunnkretsene eller
-   delområdene i de valgte kommunene i stedet for kommunene, og utelat eventuelt delområder
-5. **Last ned** — velg format, juster filnavnet om du vil, og trykk på knappen
+Sidekolonnen til venstre har fire steg, og kartet fyller resten av skjermen:
+
+1. **Inndeling** — fylker (med kommuner og bydeler), eller en annen inndeling som
+   politidistrikter, så grupperes kommunene etter den i stedet
+2. **Fylker** (eller distrikter) — velg med knappene, eller klikk i kartet
+3. **Kommuner** — kommunene i valgte fylker, med søk på navn eller nummer. Kommuner med
+   bydelsdata er merket med en liten prikk. Under listen kan du velge **bydeler**, eller
+   **grunnkretser og delområder** (og utelate delområder)
+4. **Geometri** — følg kysten eller gå ut til havgrensen, og velg detaljnivå
+
+**Last ned** nederst i sidekolonnen: velg format, juster filnavnet om du vil, og trykk på
+knappen. I kartet kan du klikke på områder for å legge dem til i eller fjerne dem fra utvalget,
+og **Data i filen** viser kolonnene og nøkkelkolonnen du kobler egne data på. På mobil ligger
+kartet øverst og kontrollene i et panel med fanene Utvalg, Geometri og Kolonner.
 
 ## Teknisk
 
@@ -55,7 +61,7 @@ Alt skjer i nettleseren — ingen data sendes til noen server.
   fra [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey/), satt i `src/components/MapPreview.tsx`)
 - [topojson-client](https://github.com/topojson/topojson-client) og
   [topojson-server](https://github.com/topojson/topojson-server) for konvertering i nettleseren
-- Selvhostet [Inter](https://rsms.me/inter/)-font (ingen eksterne font-kall)
+- Selvhostede fonter: [Schibsted Grotesk](https://github.com/schibsted/schibsted-grotesk) og [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (ingen eksterne font-kall)
 
 ### Arkitektur
 

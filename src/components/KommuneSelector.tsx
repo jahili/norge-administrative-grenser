@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import type { BydelProperties, KommuneGruppe, KommuneProperties } from '../lib/types'
 import type { SelectionApi } from '../hooks/useSelection'
+import { SectionHeader } from './ui'
 
 interface KommuneSelectorProps {
   /** Fylker or districts, in display order; only the selected ones are shown. */
@@ -11,8 +12,15 @@ interface KommuneSelectorProps {
   kommunerByGroup: Map<string, KommuneProperties[]>
   bydelsByKommune: Map<string, BydelProperties[]>
   selection: SelectionApi
+  number?: string
+  /** Mobile: let the sheet scroll instead of capping the list's height. */
+  uncapped?: boolean
 }
 
+/**
+ * Section 03: kommuner in the selected groups — a «Hele {gruppe}» row per
+ * group, then one row per kommune with its number. Searchable by name or number.
+ */
 export function KommuneSelector({
   groups,
   gruppeFlertall,
@@ -20,116 +28,143 @@ export function KommuneSelector({
   kommunerByGroup,
   bydelsByKommune,
   selection,
+  number,
+  uncapped = false,
 }: KommuneSelectorProps) {
-  const selectedGroups = groups.filter((g) => selection.selectedGroups.has(g.id))
-
-  return (
-    <fieldset className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <legend className="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">2. Velg kommuner</legend>
-
-      {selectedGroups.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-          Velg {gruppeArtikkel} eller flere {gruppeFlertall} for å se kommunene deres her.
-        </p>
-      ) : (
-        <div className="mt-2 flex flex-col gap-4">
-          {selectedGroups.map((group) => (
-            <KommuneGroup
-              key={group.id}
-              group={group}
-              kommuner={kommunerByGroup.get(group.id) ?? []}
-              bydelsByKommune={bydelsByKommune}
-              selection={selection}
-            />
-          ))}
-        </div>
-      )}
-    </fieldset>
-  )
-}
-
-interface KommuneGroupProps {
-  group: KommuneGruppe
-  kommuner: KommuneProperties[]
-  bydelsByKommune: Map<string, BydelProperties[]>
-  selection: SelectionApi
-}
-
-function KommuneGroup({ group, kommuner, bydelsByKommune, selection }: KommuneGroupProps) {
-  const headingId = useId()
   const searchId = useId()
   const [query, setQuery] = useState('')
+  const selectedGroups = groups.filter((g) => selection.selectedGroups.has(g.id))
+  const all = selectedGroups.flatMap((g) => kommunerByGroup.get(g.id) ?? [])
+  const valgt = all.filter((k) => selection.selectedKommuner.has(k.kommunenummer)).length
 
-  const filtered = query.trim()
-    ? kommuner.filter((k) => k.kommunenavn.toLowerCase().includes(query.trim().toLowerCase()))
-    : kommuner
+  const q = query.trim().toLowerCase()
+  const matches = (k: KommuneProperties) =>
+    !q || k.kommunenavn.toLowerCase().includes(q) || k.kommunenummer.startsWith(q)
 
-  const allSelected = kommuner.every((k) => selection.selectedKommuner.has(k.kommunenummer))
-  const someSelected = kommuner.some((k) => selection.selectedKommuner.has(k.kommunenummer))
+  const title =
+    selectedGroups.length === 1 ? `Kommuner i ${selectedGroups[0].navn}` : 'Kommuner'
 
   return (
-    <div
-      role="group"
-      aria-labelledby={headingId}
-      className="rounded-sm border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40"
-    >
-      <label id={headingId} className="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-200">
-        <input
-          type="checkbox"
-          className="h-4 w-4 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
-          checked={allSelected}
-          ref={(el) => {
-            if (el) el.indeterminate = someSelected && !allSelected
-          }}
-          onChange={() => selection.toggleAllInGroup(group.id)}
-        />
-        Velg alle i {group.navn} ({kommuner.length})
-      </label>
+    <section className="flex flex-col gap-2.5">
+      <SectionHeader
+        number={number}
+        title={title}
+        aside={
+          all.length > 0 && (
+            <span className="font-mono text-xs text-muted" aria-label={`${valgt} av ${all.length} kommuner valgt`}>
+              {valgt} / {all.length}
+            </span>
+          )
+        }
+      />
 
-      {kommuner.length > 8 && (
-        <div className="mt-2">
-          <label htmlFor={searchId} className="sr-only">
-            Søk i {group.navn}
-          </label>
-          <input
-            id={searchId}
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Søk kommuner…"
-            className="w-full rounded-xs border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 placeholder-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500 dark:focus-visible:outline-teal-400"
-          />
-        </div>
-      )}
-
-      {filtered.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-400 dark:text-slate-500">Ingen kommuner matcher «{query}».</p>
+      {selectedGroups.length === 0 ? (
+        <p className="text-muted">
+          Velg {gruppeArtikkel} eller flere {gruppeFlertall} for å se kommunene her.
+        </p>
       ) : (
-        <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3 lg:grid-cols-4">
-          {filtered.map((kommune) => (
-            <li key={kommune.kommunenummer}>
-              <label className="flex items-center gap-2 rounded-xs px-1 py-0.5 text-sm text-slate-700 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 shrink-0 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
-                  checked={selection.selectedKommuner.has(kommune.kommunenummer)}
-                  onChange={() => selection.toggleKommune(kommune.kommunenummer)}
-                />
-                <span className="flex min-w-0 items-center gap-1">
-                  <span className="truncate">{kommune.kommunenavn}</span>
-                  {bydelsByKommune.has(kommune.kommunenummer) && (
-                    <span
-                      title="Har bydeler"
-                      className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-teal-600 dark:bg-teal-400"
-                      aria-label="Har bydeler"
+        <>
+          <div className="flex h-10 items-center gap-2 rounded-field border border-input bg-surface px-3 focus-within:outline-2 focus-within:outline-accent">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-muted" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-4-4" />
+            </svg>
+            <label htmlFor={searchId} className="sr-only">
+              Søk kommuner
+            </label>
+            <input
+              id={searchId}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Søk kommune eller nummer"
+              className="min-w-0 flex-1 bg-transparent text-ink outline-none placeholder:text-muted"
+            />
+          </div>
+
+          {selectedGroups.length > 1 && (
+            <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-field border border-line bg-surface-2 px-3 py-2 font-semibold text-ink hover:bg-row-selected">
+              <input
+                type="checkbox"
+                className="h-4 w-4 shrink-0 cursor-pointer"
+                checked={valgt === all.length}
+                ref={(el) => {
+                  if (el) el.indeterminate = valgt > 0 && valgt < all.length
+                }}
+                onChange={() => selection.toggleAllInGroups(selectedGroups.map((g) => g.id))}
+              />
+              <span className="flex-1">
+                Alle kommuner i {selectedGroups.length} valgte {gruppeFlertall}
+              </span>
+              <span className="font-mono text-xs font-normal text-muted">{all.length}</span>
+            </label>
+          )}
+
+          <div className={`overflow-auto rounded-field border border-line ${uncapped ? '' : 'max-h-[260px]'}`}>
+            {selectedGroups.map((group) => {
+              const kommuner = kommunerByGroup.get(group.id) ?? []
+              const shown = kommuner.filter(matches).sort((a, b) => a.kommunenavn.localeCompare(b.kommunenavn, 'nb'))
+              const allSelected = kommuner.every((k) => selection.selectedKommuner.has(k.kommunenummer))
+              const someSelected = kommuner.some((k) => selection.selectedKommuner.has(k.kommunenummer))
+              return (
+                <div key={group.id} role="group" aria-label={group.navn}>
+                  <label className="sticky top-0 z-10 flex min-h-11 cursor-pointer items-center gap-2.5 border-b border-seg bg-surface px-3 py-2 font-medium text-ink">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 shrink-0 cursor-pointer"
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelected && !allSelected
+                      }}
+                      onChange={() => selection.toggleAllInGroup(group.id)}
                     />
+                    <span className="flex-1">Hele {group.navn}</span>
+                    <span className="font-mono text-xs font-normal text-muted">{kommuner.length}</span>
+                  </label>
+                  {shown.length === 0 ? (
+                    <p className="px-3 py-2 text-muted">Ingen kommuner matcher «{query}».</p>
+                  ) : (
+                    shown.map((kommune) => {
+                      const checked = selection.selectedKommuner.has(kommune.kommunenummer)
+                      return (
+                        <label
+                          key={kommune.kommunenummer}
+                          className={`flex min-h-11 cursor-pointer items-center gap-2.5 px-3 py-1.5 hover:bg-row-selected ${
+                            uncapped ? 'border-b border-seg last:border-b-0' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 shrink-0 cursor-pointer"
+                            checked={checked}
+                            onChange={() => selection.toggleKommune(kommune.kommunenummer)}
+                          />
+                          <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                            <span className="truncate">{kommune.kommunenavn}</span>
+                            {bydelsByKommune.has(kommune.kommunenummer) && (
+                              <span
+                                title="Har bydeler"
+                                aria-label="har bydeler"
+                                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                              />
+                            )}
+                          </span>
+                          <span className="font-mono text-xs text-muted">{kommune.kommunenummer}</span>
+                        </label>
+                      )
+                    })
                   )}
-                </span>
-              </label>
-            </li>
-          ))}
-        </ul>
+                </div>
+              )
+            })}
+          </div>
+          {valgt === 0 && (
+            <p className="text-xs text-muted">
+              Ingen kommuner valgt – da lastes {gruppeFlertall} ned som hele områder.
+            </p>
+          )}
+        </>
       )}
-    </div>
+    </section>
   )
 }

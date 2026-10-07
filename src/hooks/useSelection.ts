@@ -183,6 +183,13 @@ export function useSelection(
         kommuner: kommunerByGroup.get(groupId) ?? [],
         bydelsByKommune,
       }),
+    /** Selects every kommune in all the given groups, or — if they all are selected — deselects them. */
+    toggleAllInGroups: (groupIds: string[]) =>
+      dispatch({
+        type: 'toggle-all-in-group',
+        kommuner: groupIds.flatMap((id) => kommunerByGroup.get(id) ?? []),
+        bydelsByKommune,
+      }),
     toggleBydel: (bydelnummer: string) => dispatch({ type: 'toggle-bydel', bydelnummer }),
     toggleAllBydelerInKommune: (kommunenummer: string) =>
       dispatch({ type: 'toggle-all-bydeler-in-kommune', bydeler: bydelsByKommune.get(kommunenummer) ?? [] }),

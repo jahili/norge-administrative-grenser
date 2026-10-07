@@ -2,6 +2,8 @@ import { useId } from 'react'
 import { GRUNNKRETS_INDEX } from '../lib/grunnkretser'
 import type { GrunnkretsState } from '../hooks/useGrunnkretser'
 import type { GrunnkretsNivå, KommuneProperties } from '../lib/types'
+import { Segmented, Spinner } from './ui'
+import { formatBytes } from '../lib/format'
 
 export interface Delomrade {
   delomradenummer: string
@@ -25,18 +27,11 @@ interface GrunnkretsSelectorProps {
   onDelomraderChange: (delomradenumre: string[], include: boolean) => void
 }
 
-const CHECKBOX_CLASS =
-  'h-4 w-4 shrink-0 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400'
-
-function formatMB(bytes: number): string {
-  return `${(bytes / 1e6).toLocaleString('nb-NO', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} MB`
-}
-
 /**
- * Step 3 alternative to bydeler: download the grunnkretser — or delområder —
- * in the selected kommuner instead of the kommuner themselves, optionally
- * leaving out delområder. The grunnkrets files (which hold both levels) are
- * fetched per fylke only once this is switched on.
+ * Optional finer level under section 03: download the grunnkretser — or
+ * delområder — in the selected kommuner instead of the kommuner themselves,
+ * optionally leaving out delområder. The grunnkrets files (which hold both
+ * levels) are fetched per fylke only once this is switched on.
  */
 export function GrunnkretsSelector({
   kommuner,
@@ -49,6 +44,7 @@ export function GrunnkretsSelector({
   utelatteDelomrader,
   onDelomraderChange,
 }: GrunnkretsSelectorProps) {
+  const toggleId = useId()
   if (kommuner.length === 0) return null
 
   const fylker = [...new Set(kommuner.map((k) => k.fylkesnummer))]
@@ -56,61 +52,46 @@ export function GrunnkretsSelector({
   const loadingNames = state.loading.map((nr) => kommuner.find((k) => k.fylkesnummer === nr)?.fylkesnavn ?? nr)
 
   return (
-    <fieldset className="rounded-sm border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <legend className="px-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-        Grunnkretser og delområder (valgfritt)
-      </legend>
-
-      <label className="mt-1 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+    <div className="flex flex-col gap-3 rounded-card border border-line bg-surface-2 p-3">
+      <label htmlFor={toggleId} className="flex cursor-pointer items-start gap-2.5">
         <input
+          id={toggleId}
           type="checkbox"
-          className={`${CHECKBOX_CLASS} mt-0.5`}
+          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
           checked={enabled}
           onChange={(e) => onEnabledChange(e.target.checked)}
         />
-        <span>
-          Last ned grunnkretser eller delområder i{' '}
-          {kommuner.length === 1 ? kommuner[0].kommunenavn : `de ${kommuner.length} valgte kommunene`} i stedet for
-          kommunene
-          <span className="block text-xs text-slate-500 dark:text-slate-400">
-            Grunnkretser er SSBs minste statistiske enheter; et delområde er en gruppe grunnkretser. De hentes per
-            fylke ved behov (
-            {fylker.length === 1 ? '1 fylke' : `${fylker.length} fylker`}, ca. {formatMB(bytes)}).
+        <span className="flex flex-col">
+          <span className="font-semibold text-ink">Grunnkretser og delområder (valgfritt)</span>
+          <span className="text-xs text-muted">
+            Last ned SSBs minste statistiske enheter i{' '}
+            {kommuner.length === 1 ? kommuner[0].kommunenavn : `de ${kommuner.length} valgte kommunene`} i stedet for
+            kommunene. Hentes ved behov ({fylker.length === 1 ? '1 fylke' : `${fylker.length} fylker`},{' '}
+            <span className="font-mono">≈ {formatBytes(bytes)}</span>).
           </span>
         </span>
       </label>
 
       {enabled && (
-        <div className="mt-3 flex flex-col gap-3">
-          <div role="radiogroup" aria-label="Nivå" className="flex flex-col gap-2 sm:flex-row sm:gap-6">
-            {(
-              [
-                ['grunnkretser', 'Grunnkretser'],
-                ['delomrader', 'Delområder'],
-              ] as const
-            ).map(([value, label]) => (
-              <label key={value} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                <input
-                  type="radio"
-                  name="grunnkrets-niva"
-                  className="h-4 w-4 accent-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-700 dark:accent-teal-400 dark:focus-visible:outline-teal-400"
-                  checked={nivå === value}
-                  onChange={() => onNivåChange(value)}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
+        <>
+          <Segmented
+            label="Nivå"
+            options={[
+              ['grunnkretser', 'Grunnkretser'],
+              ['delomrader', 'Delområder'],
+            ]}
+            value={nivå}
+            onChange={onNivåChange}
+          />
           {state.loading.length > 0 && (
-            <p role="status" className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-teal-700 dark:border-slate-700 dark:border-t-teal-400" />
-              Laster grunnkretser for {loadingNames.join(', ')} …
+            <p role="status" className="flex items-center gap-2 text-muted">
+              <Spinner /> Laster grunnkretser for {loadingNames.join(', ')} …
             </p>
           )}
           {state.errors.size > 0 && (
-            <p role="alert" className="text-sm text-red-700 dark:text-red-400">
-              Klarte ikke å laste grunnkretser for {[...state.errors.keys()].join(', ')} (
-              {[...state.errors.values()][0]}). Slå valget av og på for å prøve igjen.
+            <p role="alert" className="text-red-700 dark:text-red-400">
+              Klarte ikke å laste grunnkretser for {[...state.errors.keys()].join(', ')} ({[...state.errors.values()][0]}). Slå
+              valget av og på for å prøve igjen.
             </p>
           )}
           {kommuner
@@ -124,9 +105,9 @@ export function GrunnkretsSelector({
                 onDelomraderChange={onDelomraderChange}
               />
             ))}
-        </div>
+        </>
       )}
-    </fieldset>
+    </div>
   )
 }
 
@@ -139,25 +120,24 @@ interface KommuneDelomraderProps {
 
 /** One kommune's delområder, collapsed by default since most people want them all. */
 function KommuneDelomrader({ kommune, delomrader, utelatteDelomrader, onDelomraderChange }: KommuneDelomraderProps) {
-  const headingId = useId()
   const ids = delomrader.map((d) => d.delomradenummer)
   const included = delomrader.filter((d) => !utelatteDelomrader.has(d.delomradenummer))
   const grunnkretser = included.reduce((sum, d) => sum + d.grunnkretser, 0)
   const allIncluded = included.length === delomrader.length
 
   return (
-    <details className="rounded-sm border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40">
-      <summary className="cursor-pointer text-sm font-medium text-slate-800 dark:text-slate-200">
-        {kommune.kommunenavn}: {grunnkretser} grunnkretser
-        {allIncluded
-          ? ` i alle ${delomrader.length} delområder`
-          : ` i ${included.length} av ${delomrader.length} delområder`}
+    <details className="rounded-field border border-line bg-surface">
+      <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2">
+        <span className="flex-1 font-medium text-ink">{kommune.kommunenavn}</span>
+        <span className="font-mono text-xs text-muted">
+          {grunnkretser} kretser · {included.length}/{delomrader.length} delområder
+        </span>
       </summary>
-      <div role="group" aria-labelledby={headingId} className="mt-2">
-        <label id={headingId} className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+      <div role="group" aria-label={`Delområder i ${kommune.kommunenavn}`} className="border-t border-seg">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 border-b border-seg px-3 py-1.5 font-medium">
           <input
             type="checkbox"
-            className={CHECKBOX_CLASS}
+            className="h-4 w-4 shrink-0 cursor-pointer"
             checked={allIncluded}
             ref={(el) => {
               if (el) el.indeterminate = included.length > 0 && !allIncluded
@@ -166,24 +146,20 @@ function KommuneDelomrader({ kommune, delomrader, utelatteDelomrader, onDelomrad
           />
           Alle delområder i {kommune.kommunenavn}
         </label>
-        <ul className="mt-2 grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="max-h-[220px] overflow-auto">
           {delomrader.map((d) => (
-            <li key={d.delomradenummer}>
-              <label className="flex items-center gap-2 rounded-xs px-1 py-0.5 text-sm text-slate-700 hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800">
-                <input
-                  type="checkbox"
-                  className={CHECKBOX_CLASS}
-                  checked={!utelatteDelomrader.has(d.delomradenummer)}
-                  onChange={(e) => onDelomraderChange([d.delomradenummer], e.target.checked)}
-                />
-                <span className="min-w-0 truncate">{d.delomradenavn}</span>
-                <span className="ml-auto shrink-0 text-xs text-slate-400 tabular-nums dark:text-slate-500">
-                  {d.grunnkretser}
-                </span>
-              </label>
-            </li>
+            <label key={d.delomradenummer} className="flex min-h-10 cursor-pointer items-center gap-2.5 px-3 py-1 hover:bg-row-selected">
+              <input
+                type="checkbox"
+                className="h-4 w-4 shrink-0 cursor-pointer"
+                checked={!utelatteDelomrader.has(d.delomradenummer)}
+                onChange={(e) => onDelomraderChange([d.delomradenummer], e.target.checked)}
+              />
+              <span className="min-w-0 flex-1 truncate">{d.delomradenavn}</span>
+              <span className="font-mono text-xs text-muted">{d.delomradenummer}</span>
+            </label>
           ))}
-        </ul>
+        </div>
       </div>
     </details>
   )
