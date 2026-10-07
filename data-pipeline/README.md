@@ -14,7 +14,7 @@ Dette kjører, i rekkefølge:
 
 | Steg | Script | Hva det gjør |
 | --- | --- | --- |
-| 1 | `data:download` | Laster ned kommune- og fylkedatasettene fra Geonorge, og SSBs navneendringer etter Geonorges uttrekk (`data-pipeline/raw/`) |
+| 1 | `data:download` | Laster ned kommune- og fylkedatasettene fra Geonorge, og SSBs kommune- og fylkesnavn (`data-pipeline/raw/`) |
 | 2 | `data:normalize` | Renser bort alle felter unntatt `kommunenummer`, `kommunenavn`, `fylkesnummer`, `fylkesnavn` (`data-pipeline/work/`) |
 | 3 | `data:topology` | Slår sammen til delt topologi, forenkler geometrien til ~5 % og skriver TopoJSON med presimplifiseringsdata |
 | 4 | `data:copy` | Kopierer resultatet til `src/assets/norge-grenser.topojson` |
@@ -41,11 +41,14 @@ kjøres.
   `administrativenhetnavn`-feltet — triveligere i lister, filnavn og på
   kartet — mens `kommunenavnOffisielt`/`fylkesnavnOffisielt` har det fulle
   offisielle navnet med samiske og kvenske navn, i offisiell rekkefølge.
-  Kartverkets uttrekk kan henge etter navneendringer (Oslo ble «Oslo - Oslove»
-  1.1.2026, men uttrekket fra 10.12.2025 sier «Oslo»). Steg 1 henter derfor
-  SSBs navn per uttrekksdato og per i dag, og der SSB-navnet har endret seg
-  etter uttrekket og Kartverket fortsatt har det gamle, bruker steg 2 SSBs nye
-  navn som offisielt navn. Når Kartverket oppdaterer, slutter dette av seg selv.
+  Kartverkets uttrekk kan henge etter de offisielle navnene, så steg 1 henter
+  SSBs navn per uttrekksdato og per i dag, og steg 2 bruker SSBs navn når
+  enten SSB-navnet er endret etter uttrekket og Kartverket har det gamle (Oslo
+  ble «Oslo - Oslove» 1.1.2026), eller SSB-navnet er Kartverkets navn pluss
+  flere språk (samiske navn vedtatt i 2024 for Rana, Sørfold, Levanger og
+  Gratangen). Andre avvik beholder Kartverkets navn: SSB skriver f.eks.
+  «Herøy (Nordland)», har annen rekkefølge for Røros og mangler «ŋ» i Porsanger.
+  Når Kartverket oppdaterer, slutter overstyringen av seg selv.
 - **Forenkling og delt topologi**: Fylke- og kommunelagene importeres sammen
   («combine-files») slik at mapshaper bygger delt topologi — sammenfallende
   grenser får identiske koordinater. Forenkling av denne delte topologien

@@ -107,22 +107,20 @@ for (const source of fileSources) {
   console.log(`[done] copied ${source.name}.geojson`)
 }
 
-// --- Name changes after Kartverket's extract (SSB KLASS) ---
+// --- SSB's kommune and fylke names (SSB KLASS) ---
 //
 // Kartverket's Basisdata files are an extract (`datauttaksdato`) that can lag
-// behind name changes — e.g. Oslo became "Oslo - Oslove" on 2026-01-01, but
-// the extract from 2025-12-10 still says "Oslo". SSB's kommune (131) and fylke
-// (104) classifications give every code's name at any date, so we record the
-// codes whose SSB name changed between Kartverket's extract and today;
-// 02-normalize uses those names as the official names. (SSB's change log
-// misses some of these, e.g. the Oslo fylke, so we compare names directly.)
-// Once Kartverket catches up, its extract date moves past the change and
-// nothing is overridden any more.
+// behind the official names: Oslo became "Oslo - Oslove" on 2026-01-01, but
+// the extract from 2025-12-10 still says "Oslo", and the Sami names adopted in
+// 2024 for Rana, Sørfold, Levanger and Gratangen are missing entirely. SSB's
+// kommune (131) and fylke (104) classifications have them, so we record SSB's
+// name for every code both at Kartverket's extract date and today;
+// 02-normalize decides when SSB's name should win.
 
 {
-  const finalPath = path.join(rawDir, 'ssb-navneendringer.json')
+  const finalPath = path.join(rawDir, 'ssb-navn.json')
   if (existsSync(finalPath)) {
-    console.log('[skip] ssb-navneendringer.json already present')
+    console.log('[skip] ssb-navn.json already present')
   } else {
     const kommuner = JSON.parse(await readFile(path.join(rawDir, 'kommuner.geojson'), 'utf-8'))
     const uttak = kommuner.features
@@ -141,19 +139,14 @@ for (const source of fileSources) {
       return new Map(codes.map((c) => [c.code, c.name]))
     }
 
-    const changes = {}
+    const navn = { kartverketUttak: uttak, ssbPer: today }
     for (const [level, classificationId] of [['kommuner', 131], ['fylker', 104]]) {
       console.log(`[download] SSB classification ${classificationId} names at ${uttak} and ${today}`)
-      const [before, now] = await Promise.all([namesAt(classificationId, uttak), namesAt(classificationId, today)])
-      changes[level] = [...now]
-        .filter(([code, name]) => before.has(code) && before.get(code) !== name)
-        .map(([code, name]) => ({ code, oldName: before.get(code), newName: name }))
+      const [vedUttak, naa] = await Promise.all([namesAt(classificationId, uttak), namesAt(classificationId, today)])
+      navn[level] = Object.fromEntries([...naa].map(([code, name]) => [code, { vedUttak: vedUttak.get(code), naa: name }]))
     }
 
-    await writeFile(finalPath, JSON.stringify({ kartverketUttak: uttak, ssbPer: today, ...changes }, null, 2), 'utf-8')
-    console.log(
-      `[done] wrote ssb-navneendringer.json (${changes.kommuner.length} kommune and ` +
-        `${changes.fylker.length} fylke name changes since ${uttak})`,
-    )
+    await writeFile(finalPath, JSON.stringify(navn, null, 2), 'utf-8')
+    console.log(`[done] wrote ssb-navn.json (SSB names at ${uttak} and ${today})`)
   }
 }

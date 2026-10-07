@@ -12,10 +12,15 @@
 //    so `kommunenavn`/`fylkesnavn` is the Norwegian name from the
 //    `administrativenhetnavn` array, while `…Offisielt` keeps the full
 //    official name — every language, in the official order (`rekkefolge`).
-//    Kartverket's extract can lag behind name changes (Oslo became
-//    "Oslo - Oslove" on 2026-01-01), so where SSB's name for a code changed
-//    after the extract (raw/ssb-navneendringer.json, from 01-download) and
-//    Kartverket still has the old name, the official name is SSB's new one.
+//    Kartverket's extract can lag behind the official names, so SSB's name
+//    (raw/ssb-navn.json, from 01-download) is used instead when either
+//      - SSB renamed the code after the extract and Kartverket still has the
+//        old name (Oslo became "Oslo - Oslove" on 2026-01-01), or
+//      - SSB's name is Kartverket's names plus more languages (the Sami names
+//        adopted in 2024 for Rana, Sørfold, Levanger and Gratangen).
+//    Other differences are left alone: SSB adds disambiguations like
+//    "Herøy (Nordland)", orders some names differently, and lacks letters such
+//    as "ŋ" — Kartverket is right about those.
 //
 // 2. The kommune dataset doesn't carry fylkesnummer/fylkesnavn directly.
 //    Norway's kommunenummer encodes the fylke as its first two digits, so we
@@ -72,19 +77,15 @@ function primaryName(properties, combinedField) {
   return combined ? combined.split(' - ')[0] : combined
 }
 
-const navneendringerPath = path.join(rawDir, 'ssb-navneendringer.json')
-const navneendringer = existsSync(navneendringerPath)
-  ? JSON.parse(await readFile(navneendringerPath, 'utf-8'))
-  : { kommuner: [], fylker: [] }
-const nyttNavn = {
-  kommuner: new Map(navneendringer.kommuner.map((c) => [c.code, c])),
-  fylker: new Map(navneendringer.fylker.map((c) => [c.code, c])),
-}
-const brukteNavneendringer = new Set()
+const ssbNavnPath = path.join(rawDir, 'ssb-navn.json')
+const ssbNavn = existsSync(ssbNavnPath)
+  ? JSON.parse(await readFile(ssbNavnPath, 'utf-8'))
+  : (console.warn('[warn] raw/ssb-navn.json missing; using Kartverket\'s names only'), { kommuner: {}, fylker: {} })
+const navnFraSsb = new Set()
 
 /**
- * The full official name: every language's name, in the official order — or
- * SSB's newer name, if the code was renamed after Kartverket's extract.
+ * The full official name: every language's name, in the official order —
+ * or SSB's name, when Kartverket's extract is behind (see the top comment).
  */
 function officialName(properties, combinedField, level, code) {
   const names = [...(properties.administrativenhetnavn ?? [])]
@@ -95,17 +96,18 @@ function officialName(properties, combinedField, level, code) {
           .sort((a, b) => Number(a.rekkefolge) - Number(b.rekkefolge))
           .map((n) => n.navn)
           .join(' - ')
-  const change = nyttNavn[level].get(code)
-  if (!change) return kartverket
-  if (change.oldName !== kartverket) {
-    console.warn(
-      `[warn] SSB renamed ${level} ${code} "${change.oldName}" → "${change.newName}", but Kartverket has ` +
-        `"${kartverket}"; keeping Kartverket's name`,
-    )
-    return kartverket
-  }
-  brukteNavneendringer.add(`${code} ${change.newName}`)
-  return change.newName
+  const ssb = ssbNavn[level][code]
+  if (!ssb || ssb.naa === kartverket) return kartverket
+
+  const renamedAfterExtract = ssb.vedUttak !== ssb.naa && ssb.vedUttak === kartverket
+  const kartverketParts = new Set(kartverket.split(' - '))
+  const ssbParts = new Set(ssb.naa.split(' - '))
+  const moreLanguages =
+    ssbParts.size > kartverketParts.size && [...kartverketParts].every((part) => ssbParts.has(part))
+  if (!renamedAfterExtract && !moreLanguages) return kartverket
+
+  navnFraSsb.add(`${code} "${kartverket}" → "${ssb.naa}"`)
+  return ssb.naa
 }
 
 const fylkeRaw = await readGeonorgeCollection('fylker.geojson', 'Fylke')
@@ -169,8 +171,8 @@ await writeFile(
 )
 
 console.log(`[done] normalized ${fylkeFeatures.length} fylker and ${kommuneFeatures.length} kommuner`)
-if (brukteNavneendringer.size > 0) {
-  console.log(`[done] official names from SSB, newer than Kartverket's extract: ${[...brukteNavneendringer].join('; ')}`)
+if (navnFraSsb.size > 0) {
+  console.log(`[done] official names from SSB, where Kartverket's extract is behind: ${[...navnFraSsb].join('; ')}`)
 }
 
 // --- "Uten havgrense" layers (coastline-clipped, no maritime border extension) ---
