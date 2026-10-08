@@ -38,6 +38,7 @@ export type DistriktKind =
   | 'reiselivsregioner'
   | 'samiskeValgkretser'
   | 'sentralitet'
+  | 'baregioner'
 
 /** What kommuner are grouped by in step 1: fylker or one of the district kinds. */
 export type GruppeKind = 'fylker' | DistriktKind

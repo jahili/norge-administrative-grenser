@@ -19,7 +19,7 @@ interface DistriktKindInfo {
   nameField: string
   /** Appended to a single district's name in filenames, when the name doesn't say what it is. */
   filnavnSuffiks?: string
-  /** List the districts under their fylke (only for divisions that nest within fylker). */
+  /** List the districts under their fylke — the one most of a district's kommuner are in. */
   listeEtterFylke?: boolean
   /** A grouping of kommuner by a property rather than a geographic region, so its
    *  "districts" are not contiguous areas (e.g. sentralitet). */
@@ -159,6 +159,19 @@ export const DISTRIKT_KINDS: Record<DistriktKind, DistriktKindInfo> = {
     nameField: 'sentralitetnavn',
     ikkeSammenhengende: true,
     objects: { med: 'sentralitet', uten: 'sentralitetUtenHavgrense' },
+  },
+  baregioner: {
+    tittel: 'Bo- og arbeidsmarkedsregioner',
+    entall: 'BA-region',
+    flertall: 'BA-regioner',
+    artikkel: 'én',
+    kilde: 'TØI for Kommunal- og moderniseringsdepartementet (2019), kodet om til kommuneinndelingen 2024',
+    kildeUrl: 'https://www.regjeringen.no/no/dokumenter/inndeling-av-kommuner-i-bo--og-arbeidsmarkedsregioner/id2662614/',
+    idField: 'baregionnummer',
+    nameField: 'baregionnavn',
+    filnavnSuffiks: 'BA-region',
+    listeEtterFylke: true,
+    objects: { med: 'baregioner', uten: 'baregionerUtenHavgrense' },
   },
 }
 

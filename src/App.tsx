@@ -81,7 +81,7 @@ function App() {
         <div className="flex flex-1 items-center justify-center p-6">
           {topologyState.status === 'loading' ? (
             <p role="status" className="flex items-center gap-3 text-ink-2">
-              <Spinner /> Laster inn kartdata (5,6 MB) …
+              <Spinner /> Laster inn kartdata (5,9 MB) …
             </p>
           ) : (
             <p role="alert" className="text-red-700 dark:text-red-400">
@@ -165,16 +165,18 @@ function Workspace({
   const gruppeFlertall = gruppeKind === 'fylker' ? 'fylker' : DISTRIKT_KINDS[gruppeKind].flertall
   const gruppeArtikkel = gruppeKind === 'fylker' ? 'ett' : DISTRIKT_KINDS[gruppeKind].artikkel
 
-  // Divisions that nest within fylker (e.g. 85 økonomiske regioner) are listed
-  // under their fylke. A district's fylke is that of its kommuner; if any
-  // district turns out to span fylker, fall back to one flat list.
+  // Divisions with many districts (e.g. 85 økonomiske regioner, 159
+  // BA-regioner) are listed under a fylke: the one most of a district's
+  // kommuner are in, so the few districts crossing a fylke border still land
+  // somewhere sensible.
   const fylkeSeksjoner = useMemo<GruppeSeksjon[] | undefined>(() => {
     if (gruppeKind === 'fylker' || !DISTRIKT_KINDS[gruppeKind].listeEtterFylke) return undefined
     const byFylke = new Map<string, KommuneGruppe[]>()
     for (const group of groups) {
-      const fylker = new Set((kommunerByGroup.get(group.id) ?? []).map((k) => k.fylkesnummer))
-      if (fylker.size !== 1) return undefined
-      const [fylkesnummer] = fylker
+      const counts = new Map<string, number>()
+      for (const k of kommunerByGroup.get(group.id) ?? []) counts.set(k.fylkesnummer, (counts.get(k.fylkesnummer) ?? 0) + 1)
+      const [fylkesnummer] = [...counts].sort((a, b) => b[1] - a[1] || fylkeRekkefolge(a[0]) - fylkeRekkefolge(b[0]))[0] ?? []
+      if (!fylkesnummer) continue
       byFylke.set(fylkesnummer, [...(byFylke.get(fylkesnummer) ?? []), group])
     }
     return fylkeGrupper

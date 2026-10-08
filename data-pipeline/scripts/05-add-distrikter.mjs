@@ -21,6 +21,10 @@
 // toggle for free, and barely grow the file.
 //
 // Sources (see DISTRIKTER below):
+//   - A kommune table committed to data-pipeline/source/ (bo- og
+//     arbeidsmarkedsregioner: TØI's 2019 division for the 2020 kommune
+//     structure, recoded to 2024; it exists only as a report and spreadsheet). Rows give kommunenummer and «<number> <name>»;
+//     identical duplicate rows are ignored, conflicting ones fail the step.
 //   - SSB KLASS classifications with a kommune correspondence table: the
 //     newest table is used. If it predates the current kommune numbers (the
 //     helseregion table stops at Kommuneinndeling 2020), its kommune codes are
@@ -53,6 +57,7 @@ const mapshaper = require('mapshaper')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rawDir = path.join(__dirname, '..', 'raw')
+const sourceDir = path.join(__dirname, '..', 'source')
 const topologyFile = path.join(__dirname, '..', '..', 'src', 'assets', 'norge-grenser.topojson')
 
 const KLASS_API = 'https://data.ssb.no/api/klass/v1'
@@ -146,6 +151,20 @@ const DISTRIKTER = [
     sortBy: 'nummer',
     source: { type: 'ssb-kommune', classificationId: 128 },
   },
+  {
+    kind: 'baregioner',
+    idField: 'baregionnummer',
+    nameField: 'baregionnavn',
+    // The region as written in the source table and reports, e.g. «5 Oslo/Bærum».
+    extraFields: ['baregion'],
+    sortBy: 'nummer',
+    source: {
+      type: 'csv-kommune',
+      file: 'bo_og_arbeidsmarkedsregioner_2024.csv',
+      kommuneColumn: 'kommunenr_2024',
+      regionColumn: 'BA-region',
+    },
+  },
 ]
 
 await mkdir(rawDir, { recursive: true })
@@ -169,7 +188,7 @@ for (const distrikt of DISTRIKTER) {
 }
 
 // Replace the district fields (from any earlier run), keeping the kommune's own.
-const distriktFields = new Set(DISTRIKTER.flatMap((d) => [d.idField, d.nameField]))
+const distriktFields = new Set(DISTRIKTER.flatMap((d) => [d.idField, d.nameField, ...(d.extraFields ?? [])]))
 for (const layer of Object.values(kommuneLayers)) {
   for (const geometry of layer.geometries) {
     const { kommunenummer } = geometry.properties
@@ -177,9 +196,10 @@ for (const layer of Object.values(kommuneLayers)) {
       Object.entries(geometry.properties).filter(([field]) => !distriktFields.has(field)),
     )
     for (const { distrikt, byKommune } of assignments) {
-      const { id, navn } = byKommune.get(kommunenummer)
+      const { id, navn, extra = {} } = byKommune.get(kommunenummer)
       geometry.properties[distrikt.idField] = id
       geometry.properties[distrikt.nameField] = navn
+      Object.assign(geometry.properties, extra)
     }
   }
 }
@@ -196,7 +216,7 @@ console.log(
 )
 
 /** One merged geometry per district, ordered by `sortBy`. */
-function mergeKommuner(layer, { idField, nameField, sortBy }) {
+function mergeKommuner(layer, { idField, nameField, extraFields = [], sortBy }) {
   const groups = new Map()
   for (const geometry of layer.geometries) {
     const id = geometry.properties[idField]
@@ -206,7 +226,11 @@ function mergeKommuner(layer, { idField, nameField, sortBy }) {
   }
   const geometries = [...groups].map(([id, group]) => ({
     ...topojsonClient.mergeArcs(topology2d, group),
-    properties: { [idField]: id, [nameField]: group[0].properties[nameField] },
+    properties: {
+      [idField]: id,
+      [nameField]: group[0].properties[nameField],
+      ...Object.fromEntries(extraFields.map((field) => [field, group[0].properties[field]])),
+    },
   }))
   const sortField = sortBy === 'nummer' ? idField : nameField
   geometries.sort((a, b) =>
@@ -221,9 +245,11 @@ async function assign(distrikt) {
   const { label, byKommune } =
     source.type === 'dsb-110'
       ? await distrikt110Assignment()
-      : source.type === 'ssb-fylke'
-        ? await ssbFylkeAssignment(source.classificationId)
-        : await ssbKommuneAssignment(source.classificationId)
+      : source.type === 'csv-kommune'
+        ? await csvKommuneAssignment(source)
+        : source.type === 'ssb-fylke'
+          ? await ssbFylkeAssignment(source.classificationId)
+          : await ssbKommuneAssignment(source.classificationId)
 
   const missing = [...kommunenumre].filter((nr) => !byKommune.has(nr))
   if (missing.length > 0) {
@@ -345,6 +371,68 @@ async function ssbFylkeAssignment(classificationId) {
     if (byFylke.has(fylkesnummer)) byKommune.set(kommunenummer, byFylke.get(fylkesnummer))
   }
   return { label: source, byKommune }
+}
+
+/** Parses a comma- or semicolon-separated table with a header row (quotes allowed). */
+function parseCsv(text) {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim())
+  const delimiter = (lines[0].match(/;/g) ?? []).length > (lines[0].match(/,/g) ?? []).length ? ';' : ','
+  const split = (line) => {
+    const cells = []
+    let cell = ''
+    let quoted = false
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i]
+      if (quoted) {
+        if (c === '"' && line[i + 1] === '"') (cell += '"'), i++
+        else if (c === '"') quoted = false
+        else cell += c
+      } else if (c === '"') quoted = true
+      else if (c === delimiter) cells.push(cell), (cell = '')
+      else cell += c
+    }
+    cells.push(cell)
+    return cells.map((value) => value.trim())
+  }
+  const [header, ...rows] = lines.map(split)
+  return rows.map((cells) => Object.fromEntries(header.map((name, i) => [name, cells[i] ?? ''])))
+}
+
+/**
+ * District per kommune from a table committed to data-pipeline/source/,
+ * whose region column reads «<number> <name>». Numbers are normalised to
+ * three digits (the source writes both «05» and «5» for Oslo/Bærum); the
+ * original form, with the number as in the reports, goes to the extra field.
+ */
+async function csvKommuneAssignment({ file, kommuneColumn, regionColumn }) {
+  const rows = parseCsv(await readFile(path.join(sourceDir, file), 'utf-8'))
+  const byKommune = new Map()
+  const navnByNummer = new Map()
+  const problems = []
+  for (const row of rows) {
+    const kommunenummer = row[kommuneColumn]
+    const match = /^(\d+)\s+(.+)$/.exec(row[regionColumn] ?? '')
+    if (!/^\d{4}$/.test(kommunenummer) || !match) {
+      problems.push(`unreadable row: ${JSON.stringify(row)}`)
+      continue
+    }
+    const [, number, navn] = match
+    const id = number.padStart(3, '0')
+    if (navnByNummer.has(id) && navnByNummer.get(id) !== navn) {
+      problems.push(`region ${id} is called both "${navnByNummer.get(id)}" and "${navn}"`)
+    }
+    navnByNummer.set(id, navn)
+    const district = { id, navn, extra: { baregion: `${Number(number)} ${navn}` } }
+    const existing = byKommune.get(kommunenummer)
+    if (existing && existing.id !== id) {
+      problems.push(`kommune ${kommunenummer} is in both ${existing.id} and ${id}`)
+    }
+    byKommune.set(kommunenummer, district)
+  }
+  const unknown = [...byKommune.keys()].filter((nr) => !kommunenumre.has(nr))
+  if (unknown.length > 0) problems.push(`unknown kommunenumre: ${unknown.join(', ')}`)
+  if (problems.length > 0) throw new Error(`${file}:\n  ${problems.join('\n  ')}`)
+  return { label: file, byKommune }
 }
 
 /**

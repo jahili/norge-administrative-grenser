@@ -86,6 +86,7 @@ deler samme buesett (arcs):
 | `reiselivsregioner` / `…UtenHavgrense` | 65 reiselivsregioner |
 | `samiskeValgkretser` / `…UtenHavgrense` | 7 samiske valgkretser (sametingsvalg) |
 | `sentralitet` / `…UtenHavgrense` | 6 sentralitetsgrupper — ikke sammenhengende områder, men alle kommuner med samme sentralitet |
+| `baregioner` / `…UtenHavgrense` | 159 bo- og arbeidsmarkedsregioner (TØI, kodet om til 2024, se under) |
 
 Distriktlagene er satt sammen av kommunene. Kommunelagene har i tillegg et nummer- og
 navnefelt per inndeling (`politidistriktnummer`/`politidistriktnavn`, `distrikt110id`/`distrikt110navn`,
@@ -161,6 +162,16 @@ Grunnlagsdataene er samlet i [Kart-fylker-og-kommuner-json](https://github.com/j
   [128](https://www.ssb.no/klass/klassifikasjoner/128) (koblingstabeller mot kommuneinndelingen;
   helseregionenes tabell er fra 2020 og oversettes til dagens kommunenumre med SSBs liste over
   kommuneendringer)
+- **Bo- og arbeidsmarkedsregioner:** [Transportøkonomisk institutt (TØI), «Inndeling av kommuner i
+  bo- og arbeidsmarkedsregioner»](https://www.regjeringen.no/no/dokumenter/inndeling-av-kommuner-i-bo--og-arbeidsmarkedsregioner/id2662614/),
+  på oppdrag fra Kommunal- og moderniseringsdepartementet (2019) — 159 BA-regioner for
+  kommunestrukturen 2020 ([rapport](https://www.regjeringen.no/contentassets/735944a205424d14afef809bc039d76b/inndeling_ba-regioner_2020.pdf),
+  [regneark](https://www.regjeringen.no/contentassets/735944a205424d14afef809bc039d76b/baregioner_2020.xlsx)).
+  Inndelingen er kodet om til kommunestrukturen og kommunenumrene fra 2024, og Haram
+  (skilt ut fra Ålesund i 2024) er plassert i Ålesund-regionen
+  ([`data-pipeline/source/bo_og_arbeidsmarkedsregioner_2024.csv`](data-pipeline/source/bo_og_arbeidsmarkedsregioner_2024.csv)).
+  Tabellen har også TØIs reisetid, pendling og inkluderingsgrunnlag per kommune; appen bruker bare
+  regionen
 - **Landsdeler:** [SSB, Standard for landsdelsinndeling](https://www.ssb.no/klass/klassifikasjoner/106)
   (koblingstabell mot fylkesinndelingen)
 - **110-distrikter:** [DSB, Brannalarmsentraler](https://kartkatalog.geonorge.no/metadata/c4436a5f-1e22-461a-8209-786f7052acb5)

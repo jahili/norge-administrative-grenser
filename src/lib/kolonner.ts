@@ -51,6 +51,12 @@ const BASE_KOLONNER: Record<string, KolonneInfo> = {
 /** Describes one exported column: fylke/kommune/bydel fields, or a district kind's id/name field. */
 export function kolonneInfo(kolonne: string): KolonneInfo | undefined {
   if (kolonne in BASE_KOLONNER) return BASE_KOLONNER[kolonne]
+  if (kolonne === 'baregion') {
+    return {
+      beskrivelse:
+        'BA-regionen slik den står i kildetabellen og rapportene: nummer uten ledende null + navn (f.eks. «5 Oslo/Bærum»)',
+    }
+  }
   for (const kind of DISTRIKT_KIND_LIST) {
     const { idField, nameField, entall, kilde, kildeUrl } = DISTRIKT_KINDS[kind]
     if (kolonne === idField) {

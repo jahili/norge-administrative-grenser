@@ -105,8 +105,8 @@ export function OmDataene({ open, onClose }: { open: boolean; onClose: () => voi
         </div>
         <p className="text-ink-2">
           Her kan du finne og laste ned kartdata for norske administrative grenser. Velg mellom fylker, kommuner og bydeler,
-          eller grupper kommunene etter politidistrikter, valgdistrikter, helseregioner og en rekke andre inndelinger – helt
-          ned til grunnkretser og delområder – og last ned grensene i GeoJSON- eller TopoJSON-format.
+          eller grupper kommunene etter politidistrikter, valgdistrikter, helseregioner, bo- og arbeidsmarkedsregioner og en
+          rekke andre inndelinger – helt ned til grunnkretser og delområder – og last ned grensene i GeoJSON- eller TopoJSON-format.
         </p>
         <p className="text-ink-2">
           Appen gjør det enkelt å hente ut kartgrunnlag til analyser, visualiseringer og webkart – enten du trenger hele
@@ -136,6 +136,18 @@ export function OmDataene({ open, onClose }: { open: boolean; onClose: () => voi
                 DSB
               </a>
               .
+            </li>
+            <li>
+              Bo- og arbeidsmarkedsregioner:{' '}
+              <a
+                href="https://www.regjeringen.no/no/dokumenter/inndeling-av-kommuner-i-bo--og-arbeidsmarkedsregioner/id2662614/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Transportøkonomisk institutt (TØI)
+              </a>{' '}
+              på oppdrag fra Kommunal- og moderniseringsdepartementet (2019), 159 regioner for kommunestrukturen 2020 – kodet
+              om til kommunestrukturen 2024, med Haram i Ålesund-regionen.
             </li>
             <li>
               Bydeler for Bergen, Fredrikstad, Kristiansand, Oslo, Stavanger og Trondheim (merket med{' '}

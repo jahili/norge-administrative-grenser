@@ -76,7 +76,21 @@ kjøres.
   108, helseregioner 105, familievern 557, barnevern 563, reiseliv 527, samiske
   valgkretser 581, sentralitet 128) eller fylkesinndelingen (landsdeler 106),
   og DSBs 110-distrikter. Sentralitet er en gruppering etter sentralitetsindeks,
-  ikke geografiske regioner, så «distriktene» der er ikke sammenhengende. Er SSB-tabellen eldre enn dagens kommunenumre (helseregionene
+  ikke geografiske regioner, så «distriktene» der er ikke sammenhengende.
+  Bo- og arbeidsmarkedsregionene kommer fra TØIs inndeling for Kommunal- og
+  moderniseringsdepartementet (2019, 159 regioner for kommunestrukturen 2020,
+  https://www.regjeringen.no/no/dokumenter/inndeling-av-kommuner-i-bo--og-arbeidsmarkedsregioner/id2662614/).
+  Den finnes bare som rapport og regneark, ikke som API, så den er kodet om til
+  kommunestrukturen 2024 og ligger i
+  `source/bo_og_arbeidsmarkedsregioner_2024.csv` (kolonnene `kommunenr_2024`
+  og `BA-region`, f.eks. «5 Oslo/Bærum»). Regionnummeret skrives med tre
+  sifre (`baregionnummer` «005»), mens `baregion` beholder formen fra
+  rapportene; tabellen skriver både «05» og «5» for Oslo/Bærum, så nummeret
+  normaliseres. Identiske dupliserte rader ignoreres, mens en kommune i to
+  regioner, et regionnummer med to navn eller ukjente kommunenumre stopper
+  steget. Haram (1580), skilt ut fra Ålesund i 2024, manglet i tabellen og er
+  lagt til i 79 Ålesund. Reisetid, pendling og inkluderingsgrunnlag brukes
+  ikke av appen. Er SSB-tabellen eldre enn dagens kommunenumre (helseregionene
   har bare tabell mot Kommuneinndeling 2020), oversettes kommunekodene med SSBs
   liste over kommuneendringer. De
   refererer dermed bare til kommunelagenes eksisterende buer: grensene sammenfaller
