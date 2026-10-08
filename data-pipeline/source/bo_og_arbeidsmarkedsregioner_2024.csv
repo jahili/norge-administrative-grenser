@@ -1,0 +1,366 @@
+﻿kommunenr_2024;kommunenavn_2024;BA-region;Reisetid;Ut-pendling;Inn-pendling;Inkluderingsgrunnlag
+0301;Oslo;05 Oslo/Bærum;11,88;70,21;70,21;Senterkommune (Sammen med Bærum)
+1101;Eigersund;48 Eigersund;8;59,67;59,67;Senterkommune
+1103;Stavanger;49 Stavanger/Sandnes;14,64;61,82;61,82;Senterkommune (Sammen med Sandnes)
+1106;Haugesund;50 Haugesund;5,23;51,65;51,65;Senterkommune
+1108;Sandnes;49 Stavanger/Sandnes;14,64;61,82;61,82;Senterkommune (Sammen med Stavanger)
+1111;Sokndal;48 Eigersund;29,37;12,24;2,62;Utpendling > 8
+1112;Lund;48 Eigersund;41,28;6,07;1,38;Reisevei < 45, sum pendling > 6
+1114;Bjerkreim;48 Eigersund;22,42;12,8;2,37;Utpendling > 8
+1119;Hå;49 Stavanger/Sandnes;39,83;12,16;0,99;Utpendling > 8
+1120;Klepp;49 Stavanger/Sandnes;22,08;28,24;2,34;Utpendling > 8
+1121;Time;49 Stavanger/Sandnes;27,03;24,01;1,98;Utpendling > 8
+1122;Gjesdal;49 Stavanger/Sandnes;25,78;32,68;1,74;Utpendling > 8
+1124;Sola;49 Stavanger/Sandnes;15,17;40,77;4,77;Utpendling > 8
+1127;Randaberg;49 Stavanger/Sandnes;16,99;43,01;2,04;Utpendling > 8
+1130;Strand;49 Stavanger/Sandnes;51,46;19,6;1,07;Utpendling > 8
+1133;Hjelmeland;51 Hjelmeland;15,48;67,82;67,82;Restkommune, egen BA-region
+1134;Suldal;52 Suldal;29,34;74,73;74,73;Restkommune, egen BA-region
+1135;Sauda;53 Sauda;4,41;65,65;65,65;Restkommune, egen BA-region
+1144;Kvitsøy;49 Stavanger/Sandnes;50,25;28,57;0,06;Utpendling > 8
+1145;Bokn;50 Haugesund;33,08;11,52;0,24;Utpendling > 8
+1146;Tysvær;50 Haugesund;18,87;25,26;6,85;Utpendling > 8
+1149;Karmøy;50 Haugesund;19,66;20;21,51;Utpendling > 8
+1151;Utsira;54 Utsira;0;73,73;73,73;Restkommune, egen BA-region
+1160;Vindafjord;55 Vindafjord;17,03;65;65;Senterkommune
+1505;Kristiansund;77 Kristiansund;7,31;62,96;62,96;Senterkommune
+1506;Molde;78 Molde;19,52;69,36;69,36;Senterkommune
+1508;Ålesund;79 Ålesund;21,2;70,8;70,78;Senterkommune
+1511;Vanylven;80 Vanylven;15,1;65,6;65,6;Restkommune, egen BA-region
+1514;Sande;81 Ulstein;31,85;6,11;1,79;Reisevei < 45, sum pendling > 6
+1514;Sande;81 Ulstein;31,85;6,11;1,79;Reisevei < 45, sum pendling > 6
+1515;Herøy (Møre og Romsdal);81 Ulstein;22,13;8,47;8,78;Utpendling > 8
+1516;Ulstein;81 Ulstein;5,37;53,79;53,79;Senterkommune
+1517;Hareid;81 Ulstein;12,53;20,38;12,29;Utpendling > 8
+1520;Ørsta;89 Volda;20,7;16,99;17,35;Utpendling > 8
+1525;Stranda;82 Stranda;15,29;75,38;75,38;Restkommune, egen BA-region
+1528;Sykkylven;79 Ålesund;40,47;8,4;0,96;Utpendling > 8
+1531;Sula;79 Ålesund;25,02;38,81;5,18;Utpendling > 8
+1532;Giske;79 Ålesund;26,35;35,76;4,3;Utpendling > 8
+1535;Vestnes;83 Vestnes;10,47;59,4;59,4;Restkommune, egen BA-region
+1539;Rauma;84 Rauma;16,35;66,97;66,97;Restkommune, egen BA-region
+1547;Aukra;78 Molde;36,42;22,29;2,35;Utpendling > 8
+1554;Averøy;77 Kristiansund;23,74;16,71;3,88;Utpendling > 8
+1557;Gjemnes;78 Molde;38,97;21,54;1,66;Utpendling > 8
+1560;Tingvoll;77 Kristiansund;41;9,99;1,17;Utpendling > 8
+1563;Sunndal;85 Sunndal;9,75;71,41;71,41;Restkommune, egen BA-region
+1566;Surnadal;86 Surnadal;12,67;69,84;69,84;Senterkommune
+1573;Smøla;87 Smøla;14,23;74,96;74,96;Restkommune, egen BA-region
+1576;Aure;88 Aure;20,99;65,93;65,93;Restkommune, egen BA-region
+1577;Volda;89 Volda;15,02;52,57;52,57;Senterkommune
+1578;Fjord;79 Ålesund;63,99;13,31;0,5;Utpendling > 8
+1579;Hustadvika;78 Molde;33,36;24,01;9,74;Utpendling > 8
+1804;Bodø;106 Bodø;11,69;78,05;78,05;Senterkommune
+1806;Narvik;107 Narvik;22,94;68,31;71,18;Restkommune, egen BA-region
+1811;Bindal;105 Nærøysund;58,49;9,31;1,34;Utpendling > 8
+1812;Sømna;108 Brønnøy;31,69;14,9;3,67;Utpendling > 8
+1813;Brønnøy;108 Brønnøy;12,05;67,32;67,32;Senterkommune
+1815;Vega;109 Vega;6,49;61,47;61,47;Restkommune, egen BA-region
+1816;Vevelstad;108 Brønnøy;75,86;9,36;0,59;Reisetid < 90, alt. reisemåte, pendling > 8
+1818;Herøy (Nordland);110 Herøy;8,35;61,4;61,4;Restkommune, egen BA-region
+1820;Alstahaug;111 Alstahaug;8,68;68,23;68,23;Senterkommune
+1822;Leirfjord;111 Alstahaug;22,57;24,34;7,46;Utpendling > 8
+1824;Vefsn;112 Vefsn;8,96;74,36;74,36;Senterkommune
+1825;Grane;112 Vefsn;40,55;17,49;1,82;Utpendling > 8
+1826;Aarborte - Hattfjelldal;112 Vefsn;69,3;8,32;0,79;Utpendling > 8
+1826;Aarborte - Hattfjelldal;112 Vefsn;69,3;8,32;0,79;Utpendling > 8
+1827;Dønna;111 Alstahaug;45,23;10,79;1,96;Utpendling > 8
+1828;Nesna;113 Nesna;8,73;65,16;65,16;Restkommune, egen BA-region
+1832;Hemnes;114 Rana;38,29;19,53;3,17;Utpendling > 8
+1833;Rana;114 Rana;10,98;75,64;75,64;Senterkommune
+1834;Lurøy;115 Lurøy;72,26;71,98;71,98;Restkommune, egen BA-region
+1835;Træna;116 Træna;5,87;75,43;75,43;Restkommune, egen BA-region
+1836;Rødøy;117 Rødøy;62,72;65,42;65,42;Restkommune, egen BA-region
+1837;Meløy;118 Meløy;31,32;69,4;69,4;Restkommune, egen BA-region
+1838;Gildeskål;106 Bodø;71,97;10,83;0,39;Utpendling > 8
+1839;Beiarn;119 Beiarn;13,18;59,56;59,56;Restkommune, egen BA-region
+1840;Saltdal;120 Fauske - Fuosko;31,8;5,7;2,7;Reisevei < 45, sum pendling > 6
+1841;Fauske - Fuossko;120 Fauske - Fuosko;10,26;55,84;55,84;Senterkommune
+1841;Fauske - Fuossko;120 Fauske - Fuosko;10,26;55,84;55,84;Senterkommune
+1845;Sørfold;120 Fauske - Fuosko;27,45;18,43;3,5;Utpendling > 8
+1848;Steigen;121 Steigen;22,25;66,99;66,99;Restkommune, egen BA-region
+1851;Lødingen;122 Lødingen;9,8;62,77;62,77;Restkommune, egen BA-region
+1853;Evenes;133 Harstad - Hárstták;44,22;9,42;0,49;Utpendling > 8
+1853;Evenes;133 Harstad - Hárstták;44,22;9,42;0,49;Utpendling > 8
+1856;Røst;123 Røst;1,24;70,25;70,25;Restkommune, egen BA-region
+1857;Værøy;124 Værøy;0,62;78,37;78,37;Restkommune, egen BA-region
+1859;Flakstad;125 Vestvågøy;27,08;14,64;1,7;Utpendling > 8
+1860;Vestvågøy;125 Vestvågøy;11,34;73,42;73,42;Senterkommune
+1865;Vågan;126 Vågan;14,73;73,42;73,42;Restkommune, egen BA-region
+1866;Hadsel;128 Sortland - Sourtá;33,51;8,22;6,2;Utpendling > 8
+1867;Bø;127 Bø;9,51;61,83;61,83;Restkommune, egen BA-region
+1867;Bø;127 Bø;9,51;61,83;61,83;Restkommune, egen BA-region
+1868;Øksnes;128 Sortland - Sourtá;35,53;6,64;2,97;Reisevei < 45, sum pendling > 6
+1870;Sortland - Suortá;128 Sortland - Sourtá;9,33;66,69;66,69;Senterkommune
+1870;Sortland - Suortá;128 Sortland - Sourtá;9,33;66,69;66,69;Senterkommune
+1871;Andøy;129 Andøy;19,08;69,82;69,82;Restkommune, egen BA-region
+1874;Moskenes;130 Moskenes;4,61;65,39;65,39;Restkommune, egen BA-region
+1875;Hábmer - Hamarøy;131 Hamarøy - Hábmer;24,71;56,65;56,65;Restkommune, egen BA-region
+3101;Halden;1 Halden;6,36;52,82;52,82;Senterkommune
+3103;Moss;2 Moss;6,11;43,59;43,59;Senterkommune
+3105;Sarpsborg;3 Fredrikstad/Sarpsborg;12,45;59,7;59,7;Senterkommune (sammen med Fredrikstad)
+3107;Fredrikstad;3 Fredrikstad/Sarpsborg;12,45;59,7;59,7;Senterkommune (sammen med Sarpsborg)
+3301;Drammen;6 Drammen;11,57;45,85;45,85;Senterkommune
+3303;Kongsberg;7 Kongsberg;9,32;63,18;63,18;Senterkommune
+3305;Ringerike;8 Ringerike;12,68;54,09;54,09;Senterkommune
+3110;Hvaler;3 Fredrikstad/Sarpsborg;29,13;31,21;1,04;Utpendling > 8
+3124;Aremark;1 Halden;24,56;32,44;1,43;Utpendling > 8
+3122;Marker;4 Indre Østfold;27,62;19,61;1,52;Utpendling > 8
+3118;Indre Østfold;4 Indre Østfold;12,54;43,91;43,91;Senterkommune
+3116;Skiptvet;4 Indre Østfold;17,86;21,84;1,85;Utpendling > 8
+3120;Rakkestad;4 Indre Østfold;25,18;11,6;2,14;Utpendling > 8
+3112;Råde;3 Fredrikstad/Sarpsborg;18,14;23,33;1,24;Utpendling > 8
+3114;Våler (Østfold);2 Moss;14,82;25,27;2,88;Utpendling > 8
+3216;Vestby;5 Oslo/Bærum;37,66;24,7;0,48;Utpendling > 8
+3207;Nordre Follo;5 Oslo/Bærum;22,85;40,85;2,65;Utpendling > 8
+3218;Ås;5 Oslo/Bærum;29,24;27,22;0,62;Utpendling > 8
+3214;Frogn;5 Oslo/Bærum;33,37;27,42;0,49;Utpendling > 8
+3212;Nesodden;5 Oslo/Bærum;41,71;39,77;0,86;Utpendling > 8
+3201;Bærum;5 Oslo/Bærum;11,88;70,21;70,21;Senterkommune (sammen med Oslo)
+3203;Asker;5 Oslo/Bærum;27,79;36,14;3,78;Utpendling > 8
+3226;Aurskog-Høland;5 Oslo/Bærum;50,69;15,14;0,29;Utpendling > 8
+3224;Rælingen;5 Oslo/Bærum;20,95;34,24;0,72;Utpendling > 8
+3220;Enebakk;5 Oslo/Bærum;33,83;31,01;0,4;Utpendling > 8
+3222;Lørenskog;5 Oslo/Bærum;16,11;41,4;1,82;Utpendling > 8
+3205;Lillestrøm;5 Oslo/Bærum;23,25;33,16;3,16;Utpendling > 8
+3232;Nittedal;5 Oslo/Bærum;24,09;45,61;1,21;Utpendling > 8
+3230;Gjerdrum;5 Oslo/Bærum;28,49;29,09;0,22;Utpendling > 8
+3209;Ullensaker;9 Ullensaker;7,2;42,63;42,63;Senterkommune
+3228;Nes;5 Oslo/Bærum;42,87;18,82;0,49;Utpendling > 8
+3240;Eidsvoll;9 Ullensaker;18,57;17,35;12,06;Utpendling > 8
+3238;Nannestad;9 Ullensaker;16,07;24,15;8,8;Utpendling > 8
+3242;Hurdal;9 Ullensaker;32,03;12,39;0,99;Utpendling > 8
+3310;Hole;5 Oslo/Bærum;41,31;25,7;0,2;Utpendling > 8
+3320;Flå;10 Flå;6,59;57,32;57,32;Restkommune, egen BA-region
+3322;Nesbyen;11 Gol;22,13;14,42;10,72;Utpendling > 8
+3324;Gol;11 Gol;6,3;68,5;68,5;Senterkommune
+3326;Hemsedal;11 Gol;27,19;10,25;5,81;Utpendling > 8
+3328;Ål;11 Gol;22,28;11,23;11,28;Utpendling > 8
+3330;Hol;12 Hol;11,31;69,7;69,7;Restkommune, egen BA-region
+3332;Sigdal;13 Sigdal;16,09;58,48;58,48;Restkommune, egen BA-region
+3318;Krødsherad;8 Ringerike;39,77;6,66;0,49;Reisevei < 45, sum pendling > 6
+3316;Modum;6 Drammen;36,25;11,74;1,6;Utpendling > 8
+3314;Øvre Eiker;6 Drammen;19,99;24,49;4,54;Utpendling > 8
+3312;Lier;5 Oslo/Bærum;32,17;19,87;0,59;Utpendling > 8
+3334;Flesberg;7 Kongsberg;26,22;31,91;3,03;Utpendling > 8
+3336;Rollag;7 Kongsberg;50,93;9,48;0,46;Utpendling > 8
+3338;Nore og Uvdal;14 Nore og Uvdal;14,4;72,68;72,68;Restkommune, egen BA-region
+3401;Kongsvinger;15 Kongsvinger;10,27;52,79;52,79;Senterkommune
+3403;Hamar;16 Hamar;5,46;49,56;49,56;Senterkommune
+3405;Lillehammer;17 Lillehammer;6,88;64,33;64,33;Senterkommune
+3407;Gjøvik;18 Gjøvik;11,42;52,78;52,78;Senterkommune
+3411;Ringsaker;16 Hamar;20,52;14,3;15,82;Utpendling > 8
+3412;Løten;16 Hamar;15,92;23,08;5,82;Utpendling > 8
+3413;Stange;16 Hamar;13,67;27,67;18,4;Utpendling > 8
+3414;Nord-Odal;15 Kongsvinger;35,71;6,55;1,85;Reisevei < 45, sum pendling > 8
+3415;Sør-Odal;15 Kongsvinger;21,74;14,1;6,49;Utpendling > 8
+3416;Eidskog;15 Kongsvinger;26,3;20,53;7,08;Utpendling > 8
+3417;Grue;15 Kongsvinger;30,02;12,1;3,16;Utpendling > 8
+3418;Åsnes;19 Åsnes;10,19;47,01;47,01;Restkommune, egen BA-region
+3419;Våler (Innlandet);20 Elverum;26,75;13,12;2,27;Utpendling > 8
+3420;Elverum;20 Elverum;8,03;57,96;57,96;Senterkommune
+3421;Trysil;21 Trysil;17,96;66,17954071;66,17954071;Restkommune, egen BA-region
+3422;Åmot;20 Elverum;32,75;8,24;1,78;Utpendling > 8
+3423;Stor-Elvdal;22 Stor-Elvdal;17,22;52,78;52,78;Restkommune, egen BA-region
+3424;Rendalen;23 Tynset;53,6;8,45;2,7;Utpendling > 8
+3425;Engerdal;21 Trysil;60,34;7,26;1,33;Reisevei < 75, sum pendling > 8
+3426;Tolga;23 Tynset;24,99;21,31;6,16;Utpendling > 8
+3427;Tynset;23 Tynset;13,25;69,61;69,61;Senterkommune
+3428;Alvdal;23 Tynset;24,4;17,28;7,39;Utpendling > 8
+3429;Folldal;23 Tynset;53,14;7,35;1,93;Reisevei < 75, sum pendling > 8
+3430;Os;94 Røros;21,92;22;7,62;Utpendling > 8
+3431;Dovre;24 Dovre;9,11;55,25;55,25;Senterkommune
+3236;Jevnaker;8 Ringerike;18,99;24,08;5,19;Utpendling > 8
+3234;Lunner;5 Oslo/Bærum;50,71;23,39;0,25;Utpendling > 8
+3432;Lesja;24 Dovre;25,64;12,8;9,66;Utpendling > 8
+3433;Skjåk;25 Lom;22,68;10,06;9,18;Utpendling > 8
+3434;Lom;25 Lom;9,77;58,93;58,93;Senterkommune
+3435;Vågå;27 Sel;24,03;15,14;9,11;Utpendling > 8
+3436;Nord-Fron;26 Nord-Fron;10,67;51,63;51,63;Senterkommune
+3437;Sel;27 Sel;13,24;59,64;59,64;Senterkommune
+3438;Sør-Fron;26 Nord-Fron;17,33;17,86;9,81;Utpendling > 8
+3439;Ringebu;26 Nord-Fron;32,63;3,91;3,07;Reisevei < 45, sum pendling > 6
+3440;Øyer;17 Lillehammer;19,7;29,48;5,39;Utpendling > 8
+3441;Gausdal;17 Lillehammer;23,21;29,57;6,35;Utpendling > 8
+3442;Østre Toten;18 Gjøvik;24,93;19,81;9,59;Utpendling > 8
+3443;Vestre Toten;18 Gjøvik;17,4;19,73;8,44;Utpendling > 8
+3446;Gran;5 Oslo/Bærum;66,05;9,96;0,15;Utpendling > 8
+3447;Søndre Land;18 Gjøvik;29,52;12,57;2,36;Utpendling > 8
+3448;Nordre Land;18 Gjøvik;37,12;7;1,52;Reisevei < 45, sum pendling > 8
+3449;Sør-Aurdal;28 Nord-Aurdal;34,32;11,43;5,03;Utpendling > 8
+3450;Etnedal;28 Nord-Aurdal;28,41;12,22;2,44;Utpendling > 8
+3451;Nord-Aurdal;28 Nord-Aurdal;9,89;67,78;67,78;Senterkommune
+3452;Vestre Slidre;28 Nord-Aurdal;22,4;24,41;7,83;Utpendling > 8
+3453;Øystre Slidre;28 Nord-Aurdal;25,74;21,86;11,02;Utpendling > 8
+3454;Vang;28 Nord-Aurdal;43,87;7,95;1,94;Reisevei < 45, sum pendling > 8
+3901;Horten;29 Tønsberg;20,1;15,14;5,02;Utpendling > 8
+3903;Holmestrand;6 Drammen;25,54;14,31;3,33;Utpendling > 8
+3905;Tønsberg;29 Tønsberg;12,56;56,69;56,69;Senterkommune (Sammen med Færder)
+3907;Sandefjord;29 Tønsberg;24,03;11,53;8,76;Utpendling > 8
+3909;Larvik;30 Larvik;12,76;52,55;52,55;Restkommune, egen BA-region
+3911;Færder;29 Tønsberg;12,56;56,69;56,69;Senterkommune (Sammen med Tønsberg)
+4001;Porsgrunn;31 Skien/Porsgrunn;10,58;62,65;62,65;Senterkommune (Sammen med Skien)
+4003;Skien;31 Skien/Porsgrunn;10,58;62,65;62,65;Senterkommune (sammen med Porsgrunn)
+4005;Notodden;32 Notodden;8,7;55,7;55,7;Senterkommune
+4010;Siljan;31 Skien/Porsgrunn;22,36;44,32;1,12;Utpendling > 8
+4012;Bamble;31 Skien/Porsgrunn;21,25;29,35;4,5;Utpendling > 8
+4014;Kragerø;33 Kragerø;8,04;56,63;56,63;Restkommune, egen BA-region
+4016;Drangedal;31 Skien/Porsgrunn;49,67;11,33;0,49;Utpendling > 8
+4018;Nome;31 Skien/Porsgrunn;36,08;13,7;0,96;Utpendling > 8
+4020;Midt-Telemark;32 Notodden;27,73;4,94;3,96;Reisevei < 30
+4022;Seljord;35 Seljord;9,83;54,25;54,25;Senterkommune
+4024;Hjartdal;32 Notodden;27,36;20,83;2,45;Utpendling > 8
+4026;Tinn;34 Tinn;15,79;68,84;68,84;Restkommune, egen BA-region
+4028;Kviteseid;35 Seljord;22,65;11,03;9,43;Utpendling > 8
+4030;Nissedal;36 Nissedal;13,59;56,8;56,8;Restkommune, egen BA-region
+4032;Fyresdal;37 Fyresdal;9,76;58,75;58,75;Restkommune, egen BA-region
+4034;Tokke;38 Vinje;32,31;11,53;6,79;Utpendling > 8
+4036;Vinje;38 Vinje;19,95;62,85;62,85;Senterkommune
+4201;Risør;39 Risør;9,71;46,33;46,33;Senterkommune
+4202;Grimstad;40 Arendal;18,99;16,33;8,24;Utpendling > 8
+4203;Arendal;40 Arendal;10,55;53,55;53,55;Senterkommune
+4204;Kristiansand;41 Kristiansand;12,49;67,17;67,17;Senterkommune
+4205;Lindesnes;41 Kristiansand;40,97;10,57;2,15;Utpendling > 8
+4206;Farsund;46 Lyngdal;29,28;7,85;7,44;Utpendling > 8
+4207;Flekkefjord;42 Flekkefjord;10,84;60,86;60,86;Senterkommune
+4211;Gjerstad;39 Risør;24,36;10,27;3,79;Utpendling > 8
+4212;Vegårshei;40 Arendal;37,09;10,56;0,48;Utpendling > 8
+4213;Tvedestrand;40 Arendal;27,75;13,66;1,81;Utpendling > 8
+4214;Froland;40 Arendal;19,33;34,37;4,41;Utpendling > 8
+4215;Lillesand;41 Kristiansand;25,52;23,27;2,23;Utpendling > 8
+4216;Birkenes;41 Kristiansand;33,6;20,31;0,93;Utpendling > 8
+4217;Åmli;43 Åmli;13,8;48,41;48,41;Restkommune, egen BA-region
+4218;Iveland;41 Kristiansand;39,5;19,95;0,25;Utpendling > 8
+4219;Evje og Hornnes;44 Evje og Hornnes;6,04;55,17;55,17;Senterkommune
+4220;Bygland;44 Evje og Hornnes;24,96;17,29;6,02;Utpendling > 8
+4221;Valle;45 Bykle;39,68;7,1;8,49;Reisevei < 45, sum pendling > 8
+4222;Bykle;45 Bykle;11,22;73,88;73,88;Restkommune, egen BA-region
+4223;Vennesla;41 Kristiansand;22,92;35,73;4,74;Utpendling > 8
+4224;Åseral;44 Evje og Hornnes;33,66;5,33;1,41;Reisevei < 45, sum pendling > 6
+4225;Lyngdal;46 Lyngdal;15,65;56,63;56,63;Senterkommune
+4226;Hægebostad;46 Lyngdal;35,66;15,07;2,51;Utpendling > 8
+4227;Kvinesdal;42 Flekkefjord;26,94;12,24;8,26;Utpendling > 8
+4228;Sirdal;47 Sirdal;14,5;76,07;76,07;Restkommune, egen BA-region
+4601;Bergen;56 Bergen;13,51;70,17;70,17;Senterkommune
+4602;Kinn;57 Kinn;55,09;69,38;69,38;Restkommune, egen BA-region
+4611;Etne;55 Vindafjord;31,09;15,53;7,15;Utpendling > 8
+4612;Sveio;50 Haugesund;22,7;25,36;3,6;Utpendling > 8
+4613;Bømlo;58 Stord;26,95;8,82;5,34;Utpendling > 8
+4614;Stord;58 Stord;6,12;65,61;65,61;Senterkommune
+4615;Fitjar;58 Stord;22,83;24,03;4,04;Utpendling > 8
+4616;Tysnes;59 Tysnes;11,77;56,78;56,78;Restkommune, egen BA-region
+4617;Kvinnherad;60 Kvinnherad;24,56;67,46;67,46;Restkommune, egen BA-region
+4618;Ullensvang;61 Ullensvang;27;71,5;71,5;Senterkommune
+4619;Eidfjord;61 Ullensvang;63,19;10,07;0,86;Utpendling > 8
+4620;Ulvik;62 Voss;36,23;17,22;1,23;Utpendling > 8
+4621;Voss;62 Voss;12,94;74,14;74,45;Senterkommune
+4622;Kvam;63 Kvam;15,73;68,73;68,73;Restkommune, egen BA-region
+4623;Samnanger;56 Bergen;39,14;30,61;0,25;Utpendling > 8
+4624;Bjørnafjorden;56 Bergen;35,64;29,97;2,39;Utpendling > 8
+4625;Austevoll;64 Austevoll;10,69;76,68;76,68;Restkommune, egen BA-region
+4626;Øygarden;56 Bergen;30,1;28,71;3,61;Utpendling > 8
+4627;Askøy;56 Bergen;23,85;39,01;3,7;Utpendling > 8
+4628;Vaksdal;56 Bergen;49,47;22,69;0,3;Utpendling > 8
+4629;Modalen;65 Alver;55,85;9,13;0,12;Utpendling > 8
+4630;Osterøy;56 Bergen;34,77;29,07;0,76;Utpendling > 8
+4631;Alver;65 Alver;20,06;48,2;48,2;Senterkommune
+4632;Austrheim;65 Alver;34,02;25,03;2,45;Utpendling > 8
+4633;Fedje;66 Fedje;1,31;51,57;51,57;Restkommune, egen BA-region
+4634;Masfjorden;67 Gulen;36,47;15,71;11,03;Utpendling > 8
+4635;Gulen;67 Gulen;26,45;66,62;66,62;Senterkommune
+4636;Solund;68 Solund;14,06;67,53;67,53;Restkommune, egen BA-region
+4637;Hyllestad;73 Fjaler;29,41;8,46;4,4;Utpendling > 8
+4638;Høyanger;74 Sunnfjord;57,55;7;1,33;Reisevei < 75, sum pendling > 8
+4639;Vik;69 Vik;12,66;74,14;74,14;Restkommune, egen BA-region
+4640;Sogndal;70 Sogndal;20,48;73,25;72,69;Senterkommune
+4641;Aurland;71 Aurland;8,78;67,57;67,57;Restkommune, egen BA-region
+4642;Lærdal;72 Årdal;38,2;6,83;2,7;Reisevei < 45, sum pendling > 8
+4643;Årdal;72 Årdal;38,2;1,76;4,44;Reisevei < 45, sum pendling > 6
+4644;Luster;70 Sogndal;38,25;21,88;9,29;Utpendling > 8
+4645;Askvoll;74 Sunnfjord;63,59;10,02;1,29;Utpendling > 8
+4646;Fjaler;73 Fjaler;13,28;64,96;64,96;Senterkommune
+4647;Sunnfjord;74 Sunnfjord;19,15;78,06;78,06;Senterkommune
+4648;Bremanger;57 Kinn;65,57;5,84;1,14;Forhindre ikke-sammenhengende BA-region
+4649;Stad;57 Kinn;87,07;6,96;3,49;Reisetid < 90, alt. reisemåte, pendling > 8
+4650;Gloppen;75 Gloppen;13,61;73,05;73,05;Restkommune, egen BA-region
+4651;Stryn;76 Stryn;18,62;77,29;77,29;Restkommune, egen BA-region
+5001;Trondheim;90 Trondheim;9,72;71,68;71,68;Senterkommune
+5001;Trondheim;90 Trondheim;9,72;71,68;71,68;Senterkommune
+5006;Steinkjer;91 Steinkjer;15,34;61,52;61,52;Senterkommune
+5007;Namsos - Nåavmesjenjaelmie;92 Namsos;16,46;70,52;70,52;Senterkommune
+5014;Frøya;102 Hitra;43,27;7,43;8,19;Reisevei < 45, sum pendling > 6
+5020;Osen;104 Åfjord;58,91;10,1;2,19;Utpendling > 8
+5021;Oppdal;93 Oppdal;7,48;71,85;71,85;Senterkommune
+5022;Rennebu;93 Oppdal;33,79;9,35;3,32;Utpendling > 8
+5025;Røros;94 Røros;9,36;73,24;73,24;Senterkommune
+5025;Røros;94 Røros;9,36;73,24;73,24;Senterkommune
+5025;Røros;94 Røros;9,36;73,24;73,24;Senterkommune
+5026;Holtålen;94 Røros;33,56;22,52;7,8;Utpendling > 8
+5027;Midtre Gauldal;90 Trondheim;52,71;11,42;0,34;Utpendling > 8
+5028;Melhus;90 Trondheim;24,25;41,39;3,11;Utpendling > 8
+5029;Skaun;90 Trondheim;24,6;42,56;1,58;Utpendling > 8
+5031;Malvik;90 Trondheim;18,24;49,54;3,25;Utpendling > 8
+5032;Selbu;90 Trondheim;54;12,78;0,24;Utpendling > 8
+5033;Tydal;95 Tydal;7,69;61,01;61,01;Restkommune, egen BA-region
+5034;Meråker;96 Meråker;5,74;54,77;54,77;Restkommune, egen BA-region
+5035;Stjørdal;90 Trondheim;32,37;17,54;1,91;Utpendling > 8
+5036;Frosta;97 Levanger;31,46;9,17;1,16;Utpendling > 8
+5037;Levanger;97 Levanger;11,58;59,07;59,07;Senterkommune
+5038;Verdal;97 Levanger;20,28;14,75;10,87;Utpendling > 8
+5041;Snåase - Snåsa;100 Grong;30,42;5,62;4,8;Reisevei < 45, sum pendling > 8
+5042;Lierne;98 Lierne;40,38;71,2;71,2;Restkommune, egen BA-region
+5043;Raarvihke - Røyrvik;99 Namsskogan;32,37;6,27;3,4;Reisevei < 45, sum pendling > 8
+5044;Namsskogan;99 Namsskogan;14,73;66,88;66,88;Restkommune, egen BA-region
+5045;Grong;100 Grong;8,65;58,22;58,22;Senterkommune
+5046;Høylandet;100 Grong;25,75;6,77;3,18;Reisevei < 45, sum pendling > 8
+5047;Overhalla;92 Namsos;27,06;28,61;7,09;Utpendling > 8
+5049;Flatanger;92 Namsos;61,06;9,97;0,73;Utpendling > 8
+5052;Leka;105 Nærøysund;69,02;8,33;0,48;Utpendling > 8
+5053;Inderøy;91 Steinkjer;27,41;18,04;4,93;Utpendling > 8
+5054;Indre Fosen;90 Trondheim;64,97;11,11;0,5;Utpendling > 8
+5055;Heim;101 Heim;24,59;67,21;67,21;Restkommune, egen BA-region
+5056;Hitra;102 Hitra;20,43;74,15;74,15;Restkommune, egen BA-region
+5057;Ørland;103 Ørland;14,67;68,82;68,82;Restkommune, egen BA-region
+5058;Åfjord;104 Åfjord;28,63;75,28;75,28;Senterkommune
+5059;Orkland;90 Trondheim;45,85;11,74;0,97;Utpendling > 8
+5060;Nærøysund;105 Nærøysund;23,24;76,94;76,94;Senterkommune
+5061;Rindal;86 Surnadal;30,87;16,49;5,34;Utpendling > 8
+5501;Tromsø;132 Tromsø;14,22;78,99;78,99;Senterkommune
+5503;Harstad - Hárstták;133 Harstad - Hárstták;10,33;69,75;69,75;Senterkommune
+5510;Kvæfjord;133 Harstad - Hárstták;27,5;26,21;3,05;Utpendling > 8
+5512;Dielddanuorri - Tjeldsund;133 Harstad - Hárstták;37,76;15,94;2,59;Utpendling > 8
+5514;Ibestad;138 Ibestad;12,48;63,24;63,24;Restkommune, egen BA-region
+5516;Gratangen;139 Gratangen;11,62;55,73;55,73;Restkommune, egen BA-region
+5518;Loabák - Lavangen;140 Salangen;21;10,86;4,92;Utpendling > 8
+5520;Bardu;141 Målselv;35,25;2,47;4,18;Reisevei < 45, sum pendling > 6
+5522;Salangen;140 Salangen;7,53;62,57;62,57;Senterkommune
+5524;Målselv;141 Målselv;35,25;7,37;4,35;Reisevei < 75, sum pendling > 8
+5526;Sørreisa;142 Senja;35,62;25,27;5,93;Utpendling > 8
+5528;Dyrøy;142 Senja;62,46;8,45;0,64;Utpendling > 8
+5530;Senja;142 Senja;29,94;70,62;70,62;Senterkommune
+5532;Balsfjord;132 Tromsø;67,54;13,8;0,92;Utpendling > 8
+5534;Karlsøy;132 Tromsø;88,86;15,24;0,43;Reisetid < 90, alt. reisemåte, pendling > 8
+5536;Lyngen;132 Tromsø;88,98;10,56;0,35;Reisetid < 90, alt. reisemåte, pendling > 8
+5538;Storfjord - Omasvuotna - Omasvuono;143 Storfjord - Omasvuotna - Omasvuono;15,01;51,2;51,2;Restkommune, egen BA-region
+5540;Gáivuotna - Kåfjord - Kaivuono;144 Gáivuotna - Kåfjord - Kaivuono;18,14;53,74;53,74;Restkommune, egen BA-region
+5542;Skjervøy;145 Skjervøy;12,1;70,45;70,45;Restkommune, egen BA-region
+5544;Nordreisa - Ráisa - Raisi;146 Nordreisa;12,68;62,14;62,14;Restkommune, egen BA-region
+5546;Kvænangen;147 Kvænangen;14,43;56,94;56,94;Restkommune, egen BA-region
+5601;Alta;134 Alta;11,78;75,46;75,46;Restkommune, egen BA-region
+5603;Hammerfest - Hámmerfeasta;137 Hammerfest;11,87;76,86;76,86;Restkommune, egen BA-region
+5605;Sør-Varanger;159 Sør-Varanger;14,89;72,17;72,17;Restkommune, egen BA-region
+5607;Vadsø;136 Vadsø;6,08;71,69;71,69;Senterkommune
+5610;Kárá?johka - Karasjok;154 Kárášjohka - Karasjok;6,35;69,43;69,43;Restkommune, egen BA-region
+5612;Guovdageaidnu - Kautokeino;148 Guovdageaidnu - Kautokeino;14,87;65,97;65,97;Restkommune, egen BA-region
+5614;Loppa;149 Loppa;41,87;56,16;56,16;Restkommune, egen BA-region
+5616;Hasvik;150 Hasvik;12,72;59,2;59,2;Restkommune, egen BA-region
+5618;Måsøy;151 Måsøy;11,81;65,01;65,01;Restkommune, egen BA-region
+5620;Nordkapp;152 Nordkapp;7,24;68,4;68,4;Restkommune, egen BA-region
+5622;Porsanger - Porsángu - Porsanki;153 Porsanger - Porsáŋgu - Porsanki ;15,7;67,84;67,84;Restkommune, egen BA-region
+5624;Lebesby;155 Lebesby;34,76;66,62;66,62;Restkommune, egen BA-region
+5626;Gamvik;155 Lebesby;41,91;3,9;3,68;Reisevei < 45, sum pendling > 6
+5628;Deatnu - Tana;157 Deatnu - Tana;21,05;63,91;63,91;Restkommune, egen BA-region
+5630;Berlevåg;156 Berlevåg;2,58;66,39;66,39;Restkommune, egen BA-region
+5632;Båtsfjord;158 Båtsfjord;1,58;71,36;71,36;Restkommune, egen BA-region
+5634;Vardø;135 Vardø;3,16;61,93;61,93;Restkommune, egen BA-region
+5636;Unjárga - Nesseby;136 Vadsø;38,95;9,75;1,47;Utpendling > 8
