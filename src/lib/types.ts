@@ -66,6 +66,9 @@ export interface GrunnkretsFilProperties {
   /** The first 6 digits of grunnkretsnummer. */
   delomradenummer: string
   delomradenavn: string
+  /** Only in kommuner SSB has divided into levekårssoner so far. */
+  levekarssonenummer?: string
+  levekarssonenavn?: string
   kommunenummer: string
 }
 
@@ -74,6 +77,15 @@ export interface DelomradeFilProperties {
   /** 6 digits: kommunenummer + 2 digits. */
   delomradenummer: string
   delomradenavn: string
+  kommunenummer: string
+}
+
+/** A levekårssone (LKS) as stored in the per-fylke files: its grunnkretser merged.
+ *  SSB publishes levekårssoner a batch of kommuner at a time; FHI publishes statistics on them. */
+export interface LevekarssoneFilProperties {
+  /** 10 digits: kommunenummer + 6 digits (in Bergen, the first 2 of them are the bydel). */
+  levekarssonenummer: string
+  levekarssonenavn: string
   kommunenummer: string
 }
 
@@ -90,9 +102,14 @@ export interface KommuneFelter {
 
 export type DelomradeProperties = DelomradeFilProperties & KommuneFelter
 
+export type LevekarssoneProperties = LevekarssoneFilProperties & KommuneFelter
+
 /** A grunnkrets as exported: the file's fields plus kommune- and fylke-level fields
  *  (and the grouping district's, when grouping by one) joined from the main topology. */
 export interface GrunnkretsProperties extends GrunnkretsFilProperties {
+  /** Empty in kommuner without levekårssoner, so every row has the same columns. */
+  levekarssonenummer: string
+  levekarssonenavn: string
   kommunenavn: string
   kommunenavnOffisielt: string
   fylkesnummer: string
@@ -104,7 +121,14 @@ export interface GrunnkretsProperties extends GrunnkretsFilProperties {
 export type ExportFormat = 'geojson' | 'topojson'
 
 /** Whether the export contains fylker, kommuner, bydeler, grunnkretser, or districts. */
-export type ExportGranularity = 'fylker' | 'kommuner' | 'bydeler' | 'grunnkretser' | 'delomrader' | DistriktKind
+export type ExportGranularity =
+  | 'fylker'
+  | 'kommuner'
+  | 'bydeler'
+  | 'grunnkretser'
+  | 'delomrader'
+  | 'levekarssoner'
+  | DistriktKind
 
-/** The two levels below kommune that come from the grunnkrets files. */
-export type GrunnkretsNivå = 'grunnkretser' | 'delomrader'
+/** The levels below kommune that come from the grunnkrets files. */
+export type GrunnkretsNivå = 'grunnkretser' | 'delomrader' | 'levekarssoner'

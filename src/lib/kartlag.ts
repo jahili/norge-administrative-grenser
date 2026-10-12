@@ -7,6 +7,7 @@ export type KartHandling =
   | { type: 'kommune'; id: string }
   | { type: 'bydel'; id: string }
   | { type: 'delomrade'; id: string }
+  | { type: 'levekarssone'; id: string }
 
 /** Properties of every area drawn in the map (not of the download). */
 export interface KartOmrade {
@@ -42,6 +43,9 @@ export function kartOmrader<P>(
 export function handlingTekst({ handling, selected }: KartOmrade): string {
   if (handling.type === 'delomrade') {
     return selected ? 'Klikk for å utelate delområdet' : 'Klikk for å ta med delområdet'
+  }
+  if (handling.type === 'levekarssone') {
+    return selected ? 'Klikk for å utelate levekårssonen' : 'Klikk for å ta med levekårssonen'
   }
   return selected ? 'Klikk for å fjerne fra utvalget' : 'Klikk for å legge til i utvalget'
 }

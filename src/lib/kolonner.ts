@@ -46,6 +46,12 @@ const BASE_KOLONNER: Record<string, KolonneInfo> = {
     beskrivelse: 'Delområdenummer, 6 sifre som tekst: de 6 første sifrene i grunnkretsnummeret (SSB skriver det med «00» til slutt)',
   },
   delomradenavn: { beskrivelse: 'Delområdets navn' },
+  levekarssonenummer: {
+    beskrivelse:
+      'Levekårssone (LKS), 10 sifre som tekst: kommunenummer + 6 sifre (f.eks. «3101000001»). Samme koder som FHI bruker i folkehelsestatistikken. Tom for grunnkretser i kommuner som ikke har fått levekårssoner ennå',
+    kilde: { navn: 'SSB, Kodeliste for levekårssoner (LKS)', url: 'https://www.ssb.no/klass/klassifikasjoner/745' },
+  },
+  levekarssonenavn: { beskrivelse: 'Levekårssonens navn (f.eks. «Halden LKS 01»)' },
 }
 
 /** Describes one exported column: fylke/kommune/bydel fields, or a district kind's id/name field. */
@@ -80,5 +86,6 @@ export function nokkelKolonne(granularity: ExportGranularity): string {
   if (granularity === 'bydeler') return 'bydelnummer'
   if (granularity === 'grunnkretser') return 'grunnkretsnummer'
   if (granularity === 'delomrader') return 'delomradenummer'
+  if (granularity === 'levekarssoner') return 'levekarssonenummer'
   return DISTRIKT_KINDS[granularity].idField
 }

@@ -11,6 +11,7 @@ import type {
   DistriktKind,
   GrunnkretsProperties,
   DelomradeProperties,
+  LevekarssoneProperties,
   ExportFormat,
   ExportGranularity,
   FylkeProperties,
@@ -84,7 +85,8 @@ export function buildExport(
     | FeatureCollection<AreaGeometry, BydelProperties>
     | FeatureCollection<AreaGeometry, DistriktProperties>
     | FeatureCollection<AreaGeometry, GrunnkretsProperties>
-    | FeatureCollection<AreaGeometry, DelomradeProperties>,
+    | FeatureCollection<AreaGeometry, DelomradeProperties>
+    | FeatureCollection<AreaGeometry, LevekarssoneProperties>,
   granularity: ExportGranularity,
   format: ExportFormat,
 ): { blob: Blob; extension: string } {

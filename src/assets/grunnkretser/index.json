@@ -2,76 +2,91 @@
   "11": {
     "grunnkretser": 966,
     "delomrader": 118,
-    "bytes": 918596
+    "levekarssoner": 152,
+    "bytes": 1063943
   },
   "15": {
     "grunnkretser": 765,
     "delomrader": 112,
-    "bytes": 895871
+    "levekarssoner": 40,
+    "bytes": 936878
   },
   "18": {
     "grunnkretser": 1098,
     "delomrader": 108,
-    "bytes": 1712885
+    "levekarssoner": 25,
+    "bytes": 1751263
   },
   "31": {
     "grunnkretser": 686,
     "delomrader": 87,
-    "bytes": 681148
+    "levekarssoner": 136,
+    "bytes": 826127
   },
   "32": {
     "grunnkretser": 1527,
     "delomrader": 146,
-    "bytes": 1306105
+    "levekarssoner": 261,
+    "bytes": 1599388
   },
   "33": {
     "grunnkretser": 695,
     "delomrader": 72,
-    "bytes": 741599
+    "levekarssoner": 68,
+    "bytes": 816276
   },
   "34": {
     "grunnkretser": 1576,
     "delomrader": 179,
-    "bytes": 1828961
+    "levekarssoner": 42,
+    "bytes": 1895435
   },
   "39": {
     "grunnkretser": 571,
     "delomrader": 75,
-    "bytes": 546351
+    "levekarssoner": 117,
+    "bytes": 682347
   },
   "40": {
     "grunnkretser": 612,
     "delomrader": 70,
-    "bytes": 650965
+    "levekarssoner": 88,
+    "bytes": 780089
   },
   "42": {
     "grunnkretser": 885,
     "delomrader": 96,
-    "bytes": 1025343
+    "levekarssoner": 70,
+    "bytes": 1105040
   },
   "46": {
     "grunnkretser": 1623,
     "delomrader": 165,
-    "bytes": 1910383
+    "levekarssoner": 106,
+    "bytes": 2043237
   },
   "50": {
     "grunnkretser": 1543,
     "delomrader": 144,
-    "bytes": 1869346
+    "levekarssoner": 0,
+    "bytes": 1869483
   },
   "55": {
     "grunnkretser": 627,
     "delomrader": 76,
-    "bytes": 814960
+    "levekarssoner": 32,
+    "bytes": 855364
   },
   "56": {
     "grunnkretser": 361,
     "delomrader": 39,
-    "bytes": 759451
+    "levekarssoner": 0,
+    "bytes": 759588
   },
   "03": {
     "grunnkretser": 591,
     "delomrader": 60,
-    "bytes": 388866
+    "levekarssoner": 0,
+    "bytes": 389003
   }
 }

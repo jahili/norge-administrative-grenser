@@ -21,6 +21,7 @@ Dette kjører, i rekkefølge:
 | 4 | `data:copy` | Kopierer resultatet til `src/assets/norge-grenser.topojson` |
 | 5 | `data:distrikter` | Merker kommunene med distriktene sine i elleve inndelinger (SSB, og DSB for 110), og legger til distriktlag slått sammen av kommunene, direkte i `src/assets/norge-grenser.topojson` |
 | 6 | `data:grunnkretser` | Bygger én fil per fylke med grunnkretser og delområder (`src/assets/grunnkretser/<fylkesnummer>.topojson` + `index.json`), med og uten havgrense |
+| 7 | `data:levekarssoner` | Henter SSBs levekårssoner (LKS) og deres grunnkretser fra KLASS, merker grunnkretsene med sonen og legger til sonelag slått sammen av grunnkretsene i fylkesfilene, pluss `src/assets/levekarssoner.json` med versjonen som er brukt |
 
 `data-pipeline/raw/` og `data-pipeline/work/` er mellomlagre (gitignored —
 se `.gitignore`) og kan trygt slettes; de bygges på nytt neste gang pipelinen

@@ -106,7 +106,7 @@ export function OmDataene({ open, onClose }: { open: boolean; onClose: () => voi
         <p className="text-ink-2">
           Her kan du finne og laste ned kartdata for norske administrative grenser. Velg mellom fylker, kommuner og bydeler,
           eller grupper kommunene etter politidistrikter, valgdistrikter, helseregioner, bo- og arbeidsmarkedsregioner og en
-          rekke andre inndelinger – helt ned til grunnkretser og delområder – og last ned grensene i GeoJSON- eller TopoJSON-format.
+          rekke andre inndelinger – helt ned til grunnkretser, delområder og levekårssoner – og last ned grensene i GeoJSON- eller TopoJSON-format.
         </p>
         <p className="text-ink-2">
           Appen gjør det enkelt å hente ut kartgrunnlag til analyser, visualiseringer og webkart – enten du trenger hele
@@ -124,7 +124,7 @@ export function OmDataene({ open, onClose }: { open: boolean; onClose: () => voi
               (kartdata {KARTDATA_AAR}).
             </li>
             <li>
-              Politidistrikter, valgdistrikter og de øvrige inndelingene, delområder og navneendringer:{' '}
+              Politidistrikter, valgdistrikter og de øvrige inndelingene, delområder, levekårssoner og navneendringer:{' '}
               <a href="https://www.ssb.no/klass/" target="_blank" rel="noopener noreferrer">
                 SSBs klassifikasjoner
               </a>
