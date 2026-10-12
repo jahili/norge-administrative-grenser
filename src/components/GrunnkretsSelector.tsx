@@ -1,37 +1,36 @@
 import { useId } from 'react'
 import { GRUNNKRETS_INDEX } from '../lib/grunnkretser'
+import type { Underomrade } from '../lib/grunnkretser'
+import levekarssoner from '../assets/levekarssoner.json'
 import type { GrunnkretsState } from '../hooks/useGrunnkretser'
 import type { GrunnkretsNivå, KommuneProperties } from '../lib/types'
 import { Segmented, Spinner } from './ui'
 import { formatBytes } from '../lib/format'
 
-export interface Delomrade {
-  delomradenummer: string
-  delomradenavn: string
-  grunnkretser: number
-}
+const KOMMUNER_MED_LEVEKARSSONER = new Set(levekarssoner.kommuner)
 
 interface GrunnkretsSelectorProps {
   /** The selected kommuner, whose grunnkretser are offered. */
   kommuner: KommuneProperties[]
   enabled: boolean
   onEnabledChange: (enabled: boolean) => void
-  /** Download every grunnkrets, or the grunnkretser merged per delområde. */
+  /** Download every grunnkrets, or the grunnkretser merged per delområde or levekårssone. */
   nivå: GrunnkretsNivå
   onNivåChange: (nivå: GrunnkretsNivå) => void
   state: GrunnkretsState
-  /** Delområder per kommune, once the kommune's fylke file has loaded. */
-  delomraderByKommune: Map<string, Delomrade[]>
-  utelatteDelomrader: Set<string>
-  /** Includes (`include = true`) or excludes the given delområder. */
-  onDelomraderChange: (delomradenumre: string[], include: boolean) => void
+  /** What can be left out per kommune, once the kommune's fylke file has loaded:
+   *  levekårssoner at that level, delområder otherwise. */
+  underomraderByKommune: Map<string, Underomrade[]>
+  utelatte: Set<string>
+  /** Includes (`include = true`) or excludes the given delområder or levekårssoner. */
+  onUtelatteChange: (numre: string[], include: boolean) => void
 }
 
 /**
  * Optional finer level under section 03: download the grunnkretser — or
- * delområder — in the selected kommuner instead of the kommuner themselves,
- * optionally leaving out delområder. The grunnkrets files (which hold both
- * levels) are fetched per fylke only once this is switched on.
+ * delområder or levekårssoner — in the selected kommuner instead of the
+ * kommuner themselves, optionally leaving some out. The grunnkrets files
+ * (which hold every level) are fetched per fylke only once this is switched on.
  */
 export function GrunnkretsSelector({
   kommuner,
@@ -40,9 +39,9 @@ export function GrunnkretsSelector({
   nivå,
   onNivåChange,
   state,
-  delomraderByKommune,
-  utelatteDelomrader,
-  onDelomraderChange,
+  underomraderByKommune,
+  utelatte,
+  onUtelatteChange,
 }: GrunnkretsSelectorProps) {
   const toggleId = useId()
   if (kommuner.length === 0) return null
@@ -50,6 +49,8 @@ export function GrunnkretsSelector({
   const fylker = [...new Set(kommuner.map((k) => k.fylkesnummer))]
   const bytes = fylker.reduce((sum, nr) => sum + (GRUNNKRETS_INDEX[nr]?.bytes ?? 0), 0)
   const loadingNames = state.loading.map((nr) => kommuner.find((k) => k.fylkesnummer === nr)?.fylkesnavn ?? nr)
+  const utenLevekarssoner = kommuner.filter((k) => !KOMMUNER_MED_LEVEKARSSONER.has(k.kommunenummer))
+  const flertall = nivå === 'levekarssoner' ? 'levekårssoner' : 'delområder'
 
   return (
     <div className="flex flex-col gap-3 rounded-card border border-line bg-surface-2 p-3">
@@ -62,7 +63,7 @@ export function GrunnkretsSelector({
           onChange={(e) => onEnabledChange(e.target.checked)}
         />
         <span className="flex flex-col">
-          <span className="font-semibold text-ink">Grunnkretser og delområder (valgfritt)</span>
+          <span className="font-semibold text-ink">Grunnkretser, delområder og levekårssoner (valgfritt)</span>
           <span className="text-xs text-muted">
             Last ned SSBs minste statistiske enheter i{' '}
             {kommuner.length === 1 ? kommuner[0].kommunenavn : `de ${kommuner.length} valgte kommunene`} i stedet for
@@ -79,10 +80,22 @@ export function GrunnkretsSelector({
             options={[
               ['grunnkretser', 'Grunnkretser'],
               ['delomrader', 'Delområder'],
+              ['levekarssoner', 'Levekårssoner'],
             ]}
             value={nivå}
             onChange={onNivåChange}
           />
+          {nivå === 'levekarssoner' && (
+            <p className="text-xs text-muted">
+              Levekårssoner (LKS) er grupper av grunnkretser som FHI publiserer folkehelsestatistikk på. SSB deler inn
+              kommunene puljevis; {levekarssoner.navn} har {levekarssoner.levekarssoner} soner i{' '}
+              {levekarssoner.kommuner.length} kommuner.
+              {utenLevekarssoner.length > 0 &&
+                (utenLevekarssoner.length === kommuner.length
+                  ? ' Ingen av de valgte kommunene har levekårssoner ennå.'
+                  : ` ${listeTekst(utenLevekarssoner.map((k) => k.kommunenavn))} har ingen ennå og er ikke med i nedlastingen.`)}
+            </p>
+          )}
           {state.loading.length > 0 && (
             <p role="status" className="flex items-center gap-2 text-muted">
               <Spinner /> Laster grunnkretser for {loadingNames.join(', ')} …
@@ -95,14 +108,15 @@ export function GrunnkretsSelector({
             </p>
           )}
           {kommuner
-            .filter((k) => delomraderByKommune.has(k.kommunenummer))
+            .filter((k) => underomraderByKommune.has(k.kommunenummer))
             .map((kommune) => (
-              <KommuneDelomrader
+              <KommuneUnderomrader
                 key={kommune.kommunenummer}
                 kommune={kommune}
-                delomrader={delomraderByKommune.get(kommune.kommunenummer)!}
-                utelatteDelomrader={utelatteDelomrader}
-                onDelomraderChange={onDelomraderChange}
+                omrader={underomraderByKommune.get(kommune.kommunenummer)!}
+                flertall={flertall}
+                utelatte={utelatte}
+                onUtelatteChange={onUtelatteChange}
               />
             ))}
         </>
@@ -111,29 +125,38 @@ export function GrunnkretsSelector({
   )
 }
 
-interface KommuneDelomraderProps {
-  kommune: KommuneProperties
-  delomrader: Delomrade[]
-  utelatteDelomrader: Set<string>
-  onDelomraderChange: (delomradenumre: string[], include: boolean) => void
+/** "A", "A og B", "A, B og C" — capped so a long selection doesn't fill the panel. */
+function listeTekst(navn: string[]): string {
+  if (navn.length > 4) return `${navn.slice(0, 3).join(', ')} og ${navn.length - 3} andre`
+  return navn.length === 1 ? navn[0] : `${navn.slice(0, -1).join(', ')} og ${navn[navn.length - 1]}`
 }
 
-/** One kommune's delområder, collapsed by default since most people want them all. */
-function KommuneDelomrader({ kommune, delomrader, utelatteDelomrader, onDelomraderChange }: KommuneDelomraderProps) {
-  const ids = delomrader.map((d) => d.delomradenummer)
-  const included = delomrader.filter((d) => !utelatteDelomrader.has(d.delomradenummer))
-  const grunnkretser = included.reduce((sum, d) => sum + d.grunnkretser, 0)
-  const allIncluded = included.length === delomrader.length
+interface KommuneUnderomraderProps {
+  kommune: KommuneProperties
+  omrader: Underomrade[]
+  /** "delområder" or "levekårssoner". */
+  flertall: string
+  utelatte: Set<string>
+  onUtelatteChange: (numre: string[], include: boolean) => void
+}
+
+/** One kommune's delområder or levekårssoner, collapsed by default since most people want them all. */
+function KommuneUnderomrader({ kommune, omrader, flertall, utelatte, onUtelatteChange }: KommuneUnderomraderProps) {
+  const ids = omrader.map((o) => o.nummer)
+  const included = omrader.filter((o) => !utelatte.has(o.nummer))
+  const grunnkretser = included.reduce((sum, o) => sum + o.grunnkretser, 0)
+  const allIncluded = included.length === omrader.length
+  const Flertall = flertall[0].toUpperCase() + flertall.slice(1)
 
   return (
     <details className="rounded-field border border-line bg-surface">
       <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-3 py-2">
         <span className="flex-1 font-medium text-ink">{kommune.kommunenavn}</span>
         <span className="font-mono text-xs text-muted">
-          {grunnkretser} kretser · {included.length}/{delomrader.length} delområder
+          {grunnkretser} kretser · {included.length}/{omrader.length} {flertall}
         </span>
       </summary>
-      <div role="group" aria-label={`Delområder i ${kommune.kommunenavn}`} className="border-t border-seg">
+      <div role="group" aria-label={`${Flertall} i ${kommune.kommunenavn}`} className="border-t border-seg">
         <label className="flex min-h-11 cursor-pointer items-center gap-2.5 border-b border-seg px-3 py-1.5 font-medium">
           <input
             type="checkbox"
@@ -142,21 +165,21 @@ function KommuneDelomrader({ kommune, delomrader, utelatteDelomrader, onDelomrad
             ref={(el) => {
               if (el) el.indeterminate = included.length > 0 && !allIncluded
             }}
-            onChange={() => onDelomraderChange(ids, !allIncluded)}
+            onChange={() => onUtelatteChange(ids, !allIncluded)}
           />
-          Alle delområder i {kommune.kommunenavn}
+          Alle {flertall} i {kommune.kommunenavn}
         </label>
         <div className="max-h-[220px] overflow-auto">
-          {delomrader.map((d) => (
-            <label key={d.delomradenummer} className="flex min-h-10 cursor-pointer items-center gap-2.5 px-3 py-1 hover:bg-row-selected">
+          {omrader.map((o) => (
+            <label key={o.nummer} className="flex min-h-10 cursor-pointer items-center gap-2.5 px-3 py-1 hover:bg-row-selected">
               <input
                 type="checkbox"
                 className="h-4 w-4 shrink-0 cursor-pointer"
-                checked={!utelatteDelomrader.has(d.delomradenummer)}
-                onChange={(e) => onDelomraderChange([d.delomradenummer], e.target.checked)}
+                checked={!utelatte.has(o.nummer)}
+                onChange={(e) => onUtelatteChange([o.nummer], e.target.checked)}
               />
-              <span className="min-w-0 flex-1 truncate">{d.delomradenavn}</span>
-              <span className="font-mono text-xs text-muted">{d.delomradenummer}</span>
+              <span className="min-w-0 flex-1 truncate">{o.navn}</span>
+              <span className="font-mono text-xs text-muted">{o.nummer}</span>
             </label>
           ))}
         </div>

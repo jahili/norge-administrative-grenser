@@ -14,7 +14,7 @@ npm run dev        # utviklingsserver
 npm run build      # tsc -b + vite build (tar sekunder – tar det minutter, se «Fallgruver»)
 npm run lint       # eslint, inkl. react-hooks og react-refresh
 npm run deploy     # bygger og publiserer dist/ til gh-pages (--no-history: grenen har bare siste versjon)
-npm run data:build # hele datapipelinen, steg 01–06
+npm run data:build # hele datapipelinen, steg 01–07
 ```
 
 Før commit: `npx tsc -b && npx eslint . && npm run build`. `npm ci` skal fungere (hold
@@ -25,12 +25,14 @@ Før commit: `npx tsc -b && npx eslint . && npm run build`. `npm ci` skal funger
 **Data (bygges av `data-pipeline/`, committes):**
 - `src/assets/norge-grenser.topojson` (~5,9 MB) – hovedfilen appen laster ved oppstart: fylker,
   kommuner, bydeler og alle distriktinndelingene, med og uten havgrense, i én delt topologi.
-- `src/assets/grunnkretser/<fylkesnummer>.topojson` + `index.json` – grunnkretser og delområder,
-  én fil per fylke, som appen bare henter når noen slår på grunnkretser.
+- `src/assets/grunnkretser/<fylkesnummer>.topojson` + `index.json` – grunnkretser, delområder og
+  levekårssoner, én fil per fylke, som appen bare henter når noen slår på grunnkretser.
+  `src/assets/levekarssoner.json` sier hvilken LKS-versjon som er brukt og hvilke kommuner som har soner.
 
 **Pipeline-steg:** 01 last ned (Geonorge + SSBs kommune-/fylkesnavn) → 02 normaliser → 03 delt
-topologi og forenkling (mapshaper) → 04 kopier til `src/assets` → 05 distrikter → 06 grunnkretser.
-Steg 05 og 06 kan kjøres alene mot den ferdigbygde hovedfilen. Nedlastinger caches i
+topologi og forenkling (mapshaper) → 04 kopier til `src/assets` → 05 distrikter → 06 grunnkretser
+→ 07 levekårssoner. Steg 05 og 06 kan kjøres alene mot den ferdigbygde hovedfilen, og steg 07 alene
+mot de ferdige grunnkretsfilene (06 skriver dem på nytt uten soner, så 07 må alltid kjøres etter 06). Nedlastinger caches i
 `data-pipeline/raw/` (gitignored); slett den for å hente på nytt.
 
 **Distriktinndelinger** (politidistrikter, 110-distrikter, valgdistrikter, BA-regioner m.fl.):
@@ -48,7 +50,16 @@ Steg 05 og 06 kan kjøres alene mot den ferdigbygde hovedfilen. Nedlastinger cac
   filnavn) og velger desktop- eller mobiloppsett (`useMediaQuery`, < 768 px).
 - `hooks/useSelection.ts` – utvalg per inndeling (gruppe → kommuner → bydeler), én tilstand per
   inndeling så de ikke påvirker hverandre.
-- Eksportnivået følger det dypeste valget: grunnkretser/delområder > bydeler > kommuner > grupper.
+- Eksportnivået følger det dypeste valget: grunnkretser/delområder/levekårssoner > bydeler > kommuner
+  > grupper.
+
+**Levekårssoner (LKS):** SSBs klassifikasjon 745, grupper av hele grunnkretser innen én kommune, som
+FHI publiserer folkehelsestatistikk på (samme 10-sifrede koder). SSB deler inn kommunene puljevis og
+retter enkeltkoblinger innimellom: slett `data-pipeline/raw/ssb-745-levekarssoner.json` og kjør
+`npm run data:levekarssoner` for å hente gjeldende versjon. Steget feiler hvis en grunnkrets mangler,
+står i to soner eller ligger i feil kommune, eller hvis en LKS-kommune ikke er helt dekket. I appen
+kan man utelate enkeltsoner på LKS-nivået (eget utvalg, uavhengig av utelatte delområder, siden sonene
+ikke følger delområdegrensene).
 - `components/MapView.tsx` – kartet tegner alle områder selv (`lib/kartlag.ts`); klikk slår valg
   av og på. Bakgrunnsfliser: CARTO uten stedsnavn, med API-nøkkel (offentlig i koden, som alle
   nettleser-kartnøkler; bytt den der hvis kvoten misbrukes).
@@ -82,7 +93,9 @@ Kommuner, grunnkretser og navn endres som regel 1. januar.
 
 1. Slett `data-pipeline/raw/` og kjør `npm run data:build`.
 2. Les kontrollene i utskriften: kommuner uten distrikt (SSB-tabeller som ikke er oppdatert ennå),
-   arealkontrollen for grunnkretser, og hvilke navn som er hentet fra SSB.
+   arealkontrollen for grunnkretser, og hvilke navn som er hentet fra SSB. Stopper steg 07 fordi
+   levekårssonene viser til grunnkretser som ikke finnes lenger, har SSB ikke publisert en LKS-versjon
+   for den nye grunnkretsinndelingen ennå.
 3. **BA-regionene** (`data-pipeline/source/bo_og_arbeidsmarkedsregioner_2024.csv`) er TØIs inndeling
    fra 2019, kodet om til kommunestrukturen 2024. Endres kommunestrukturen, må tabellen kodes om
    (nye kommunenumre, sammenslåinger, delinger) – ellers stopper steg 05.

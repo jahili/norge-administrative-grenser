@@ -16,9 +16,10 @@ kart- og analyseverktøy.
   regioner**, **landsdeler**, **helseregioner**, **familievernregioner**, **barnevernsregioner**,
   **reiselivsregioner**, **samiske valgkretser** eller **sentralitet** i stedet for fylker — og
   velge kommuner og bydeler innenfor dem på samme måte
-- Laste ned **grunnkretser** (SSBs minste statistiske enheter, 14 126 i hele landet) eller
-  **delområder** (grupper av grunnkretser, 1 547) for de valgte kommunene, med mulighet til å utelate
-  delområder
+- Laste ned **grunnkretser** (SSBs minste statistiske enheter, 14 126 i hele landet),
+  **delområder** (grupper av grunnkretser, 1 547) eller **levekårssoner** (LKS, 1 137 i de 66
+  kommunene SSB har delt inn så langt) for de valgte kommunene, med mulighet til å utelate
+  delområder eller levekårssoner
 - Se utvalget på et kart før du laster ned
 - Velge om grensene skal **følge kystlinjen** eller strekke seg ut til
   **territorialgrensen i havet** («havgrensen»)
@@ -42,7 +43,7 @@ Sidekolonnen til venstre har fire steg, og kartet fyller resten av skjermen:
 2. **Fylker** (eller distrikter) — velg med knappene, eller klikk i kartet
 3. **Kommuner** — kommunene i valgte fylker, med søk på navn eller nummer. Kommuner med
    bydelsdata er merket med en liten prikk. Under listen kan du velge **bydeler**, eller
-   **grunnkretser og delområder** (og utelate delområder)
+   **grunnkretser, delområder og levekårssoner** (og utelate delområder eller levekårssoner)
 4. **Geometri** — følg kysten eller gå ut til havgrensen, og velg detaljnivå
 
 **Last ned** nederst i sidekolonnen: velg format, juster filnavnet om du vil, og trykk på
@@ -94,9 +95,18 @@ navnefelt per inndeling (`politidistriktnummer`/`politidistriktnavn`, `distrikt1
 `landsdelnummer`/`landsdelnavn`, `helseregionnummer`/`helseregionnavn` osv., se `DISTRIKT_KINDS`
 i `src/lib/distrikter.ts`), så en kommuneeksport viser hvilke distrikter hver kommune hører til.
 
-Grunnkretsene og delområdene ligger ikke i denne filen, men i én fil per fylke
-(`src/assets/grunnkretser/`, 0,4–1,9 MB) som appen bare henter når noen slår på grunnkretser for
-kommuner i fylket. Resten av
+Grunnkretsene, delområdene og levekårssonene ligger ikke i denne filen, men i én fil per fylke
+(`src/assets/grunnkretser/`, 0,4–2,0 MB) som appen bare henter når noen slår på grunnkretser for
+kommuner i fylket.
+
+**Levekårssoner (LKS)** er SSBs inndeling av kommuner i soner av hele grunnkretser
+([klassifikasjon 745](https://www.ssb.no/klass/klassifikasjoner/745)), og Folkehelseinstituttet
+publiserer folkehelsestatistikk på dem med de samme 10-sifrede kodene (`levekarssonenummer`, f.eks.
+`3101000001` «Halden LKS 01»). SSB deler inn kommunene puljevis, så foreløpig har 66 kommuner
+levekårssoner. Sonene er grunnkretsene slått sammen, så de deler grenser nøyaktig med dem, og hver
+grunnkrets i disse kommunene har `levekarssonenummer`/`levekarssonenavn` (tomme ellers), så data på
+grunnkretsnivå kan aggregeres til soner. Hvilken versjon som er brukt, står i
+`src/assets/levekarssoner.json`. Resten av
 appen blir dermed ikke tregere av dem. Grunnkretsene får kommune- og fylkesfeltene (og distriktet
 når man grupperer etter en inndeling) fra hovedfilen ved nedlasting, og forenkles med samme
 terskel som hovedfilen. Store utvalg (over 2 000 områder) bygges først når man trykker last ned.
@@ -153,6 +163,8 @@ Grunnlagsdataene er samlet i [Kart-fylker-og-kommuner-json](https://github.com/j
 - **Bydeler i Fredrikstad:** [Kartverket](https://kartkatalog.geonorge.no/)
 - **Bydeler i Oslo:** Oslo kommune
 - **Bydeler/delområder i Bergen, Stavanger, Trondheim og Kristiansand:** [SSB](https://kart.ssb.no/)
+- **Levekårssoner:** SSBs [klassifikasjon 745](https://www.ssb.no/klass/klassifikasjoner/745) med
+  koblingstabell mot grunnkretsinndelingen
 - **Politidistrikter, valgdistrikter, økonomiske regioner, helseregioner, familievern- og
   barnevernsregioner, reiselivsregioner, samiske valgkretser og sentralitet:** SSBs klassifikasjoner
   [109](https://www.ssb.no/klass/klassifikasjoner/109), [543](https://www.ssb.no/klass/klassifikasjoner/543),

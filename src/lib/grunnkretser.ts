@@ -14,6 +14,8 @@ import type {
   GrunnkretsProperties,
   KommuneFelter,
   KommuneProperties,
+  LevekarssoneFilProperties,
+  LevekarssoneProperties,
 } from './types'
 
 /**
@@ -26,6 +28,8 @@ export type GrunnkretsTopology = Topology<{
   grunnkretserUtenHavgrense: GeometryCollection<GrunnkretsFilProperties>
   delomrader: GeometryCollection<DelomradeFilProperties>
   delomraderUtenHavgrense: GeometryCollection<DelomradeFilProperties>
+  levekarssoner: GeometryCollection<LevekarssoneFilProperties>
+  levekarssonerUtenHavgrense: GeometryCollection<LevekarssoneFilProperties>
 }>
 
 /** Hashed asset URL per fylkesnummer. */
@@ -35,8 +39,11 @@ const URLS: Record<string, string> = Object.fromEntries(
   ).map(([file, url]) => [file.match(/(\d{2})\.topojson$/)![1], url]),
 )
 
-/** Number of grunnkretser and delområder, and file size, per fylkesnummer. */
-export const GRUNNKRETS_INDEX: Record<string, { grunnkretser: number; delomrader: number; bytes: number }> = grunnkretsIndex
+/** Number of grunnkretser, delområder and levekårssoner, and file size, per fylkesnummer. */
+export const GRUNNKRETS_INDEX: Record<
+  string,
+  { grunnkretser: number; delomrader: number; levekarssoner: number; bytes: number }
+> = grunnkretsIndex
 
 const cache = new Map<string, Promise<GrunnkretsTopology>>()
 
@@ -62,8 +69,9 @@ export function loadGrunnkretser(fylkesnummer: string): Promise<GrunnkretsTopolo
 }
 
 /**
- * The grunnkretser or delområder in `kommunenumre` (minus excluded
- * delområder) as one FeatureCollection, simplified with the same weight
+ * The grunnkretser, delområder or levekårssoner in `kommunenumre` (minus the
+ * excluded ones: delområder, or levekårssoner at that level) as one
+ * FeatureCollection, simplified with the same weight
  * threshold as the main topology so the detail slider affects both alike.
  * Kommune- and fylke-level fields — and, when grouping by a district kind,
  * that district — are joined from the main topology rather than stored in
@@ -78,9 +86,13 @@ export function grunnkretsFeatures(
   ...args: FeatureArgs
 ): FeatureCollection<AreaGeometry, DelomradeProperties>
 export function grunnkretsFeatures(
+  nivå: 'levekarssoner',
+  ...args: FeatureArgs
+): FeatureCollection<AreaGeometry, LevekarssoneProperties>
+export function grunnkretsFeatures(
   nivå: GrunnkretsNivå,
-  ...[topologies, medHavgrense, minWeight, kommunenumre, utelatteDelomrader, kommuneByNummer, gruppeKind]: FeatureArgs
-): FeatureCollection<AreaGeometry, GrunnkretsProperties | DelomradeProperties> {
+  ...[topologies, medHavgrense, minWeight, kommunenumre, utelatte, kommuneByNummer, gruppeKind]: FeatureArgs
+): FeatureCollection<AreaGeometry, GrunnkretsProperties | DelomradeProperties | LevekarssoneProperties> {
   const distrikt = gruppeKind === 'fylker' ? null : DISTRIKT_KINDS[gruppeKind]
   const kommuneFelter = (kommune: KommuneProperties): KommuneFelter => ({
     kommunenavn: kommune.kommunenavn,
@@ -94,22 +106,35 @@ export function grunnkretsFeatures(
     }),
   })
   const objectName = `${nivå}${medHavgrense ? '' : 'UtenHavgrense'}` as const
-  const features: Feature<AreaGeometry, GrunnkretsProperties | DelomradeProperties>[] = []
+  const features: Feature<AreaGeometry, GrunnkretsProperties | DelomradeProperties | LevekarssoneProperties>[] = []
   for (const presimplified of topologies) {
     const topology = simplified(presimplified, minWeight)
-    const collection = topojsonClient.feature(topology, topology.objects[objectName]) as FeatureCollection<
+    const object = topology.objects[objectName] as GeometryCollection<
+      GrunnkretsFilProperties | DelomradeFilProperties | LevekarssoneFilProperties
+    >
+    const collection = topojsonClient.feature(topology, object) as FeatureCollection<
       AreaGeometry,
-      GrunnkretsFilProperties | DelomradeFilProperties
+      GrunnkretsFilProperties | DelomradeFilProperties | LevekarssoneFilProperties
     >
     for (const feature of collection.features) {
       const p = feature.properties
-      if (!kommunenumre.has(p.kommunenummer) || utelatteDelomrader.has(p.delomradenummer)) continue
+      const id =
+        nivå === 'levekarssoner'
+          ? (p as LevekarssoneFilProperties).levekarssonenummer
+          : (p as GrunnkretsFilProperties | DelomradeFilProperties).delomradenummer
+      if (!kommunenumre.has(p.kommunenummer) || utelatte.has(id)) continue
       const kommune = kommuneByNummer.get(p.kommunenummer)!
       // The file's own fields first (grunnkretsnummer … kommunenummer), then the joined ones.
-      features.push({ ...feature, properties: { ...p, ...kommuneFelter(kommune) } })
+      const own = nivå === 'grunnkretser' ? medLevekarssone(p as GrunnkretsFilProperties) : p
+      features.push({ ...feature, properties: { ...own, ...kommuneFelter(kommune) } })
     }
   }
   return { type: 'FeatureCollection', features }
+}
+
+/** A grunnkrets's fields with the levekårssone columns always present (empty outside kommuner that have them). */
+function medLevekarssone({ levekarssonenummer = '', levekarssonenavn = '', kommunenummer, ...p }: GrunnkretsFilProperties) {
+  return { ...p, levekarssonenummer, levekarssonenavn, kommunenummer }
 }
 
 /** The arguments after `nivå`, shared by both levels. */
@@ -118,7 +143,8 @@ export type FeatureArgs = [
   medHavgrense: boolean,
   minWeight: number,
   kommunenumre: Set<string>,
-  utelatteDelomrader: Set<string>,
+  /** Excluded delområder — or, at the levekårssone level, excluded levekårssoner. */
+  utelatte: Set<string>,
   kommuneByNummer: Map<string, KommuneProperties>,
   gruppeKind: GruppeKind,
 ]
@@ -135,24 +161,35 @@ function simplified(presimplified: GrunnkretsTopology, minWeight: number): Grunn
   return topology
 }
 
-/** Delområder per kommune in a loaded fylke file, in number order. */
-export function delomraderByKommune(
+/** A delområde or levekårssone, as listed per kommune for leaving some out. */
+export interface Underomrade {
+  nummer: string
+  navn: string
+  grunnkretser: number
+}
+
+/** Delområder or levekårssoner per kommune in a loaded fylke file, in number order. */
+export function underomraderByKommune(
   topology: GrunnkretsTopology,
-): Map<string, { delomradenummer: string; delomradenavn: string; grunnkretser: number }[]> {
-  const byKommune = new Map<string, Map<string, { delomradenummer: string; delomradenavn: string; grunnkretser: number }>>()
+  nivå: 'delomrader' | 'levekarssoner',
+): Map<string, Underomrade[]> {
+  const byKommune = new Map<string, Map<string, Underomrade>>()
   for (const geometry of topology.objects.grunnkretser.geometries) {
     // TopoJSON types properties as optional; every grunnkrets in our files has them.
     const p = geometry.properties as GrunnkretsFilProperties
-    const delomrader = byKommune.get(p.kommunenummer) ?? new Map()
-    const entry = delomrader.get(p.delomradenummer) ?? { delomradenummer: p.delomradenummer, delomradenavn: p.delomradenavn, grunnkretser: 0 }
+    const [nummer, navn] =
+      nivå === 'delomrader' ? [p.delomradenummer, p.delomradenavn] : [p.levekarssonenummer, p.levekarssonenavn]
+    if (!nummer || !navn) continue
+    const omrader = byKommune.get(p.kommunenummer) ?? new Map<string, Underomrade>()
+    const entry = omrader.get(nummer) ?? { nummer, navn, grunnkretser: 0 }
     entry.grunnkretser++
-    delomrader.set(p.delomradenummer, entry)
-    byKommune.set(p.kommunenummer, delomrader)
+    omrader.set(nummer, entry)
+    byKommune.set(p.kommunenummer, omrader)
   }
   return new Map(
-    [...byKommune].map(([kommunenummer, delomrader]) => [
+    [...byKommune].map(([kommunenummer, omrader]) => [
       kommunenummer,
-      [...delomrader.values()].sort((a, b) => a.delomradenummer.localeCompare(b.delomradenummer)),
+      [...omrader.values()].sort((a, b) => a.nummer.localeCompare(b.nummer)),
     ]),
   )
 }

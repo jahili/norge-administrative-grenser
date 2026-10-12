@@ -121,12 +121,13 @@ export function distriktSelectionFilenameStem(
 }
 
 /**
- * Builds a filename stem for a grunnkrets or delområde export, from the
- * kommuner they are in (shown for grunnkretser; delområder say "delområder"):
+ * Builds a filename stem for a grunnkrets, delområde or levekårssone export,
+ * from the kommuner they are in (shown for grunnkretser; the other levels say
+ * "delområder" or "levekårssoner"):
  *  - one kommune                         → "oslo-grunnkretser"
  *  - every kommune in one fylke/district → "akershus-grunnkretser"
  *  - anything else                       → "grunnkretser-i-n-kommuner"
- * "-utvalg" is added when some delområder are left out.
+ * "-utvalg" is added when some delområder or levekårssoner are left out.
  */
 export function grunnkretsSelectionFilenameStem(
   nivå: GrunnkretsNivå,
@@ -134,15 +135,15 @@ export function grunnkretsSelectionFilenameStem(
   kind: GruppeKind,
   groups: KommuneGruppe[],
   kommunerByGroup: Map<string, KommuneProperties[]>,
-  someDelomraderLeftOut: boolean,
+  someLeftOut: boolean,
 ): string {
   const kommuneStem = selectionFilenameStem(selectedKommuner, kind, groups, kommunerByGroup)
-  const ord = nivå === 'delomrader' ? 'delområder' : 'grunnkretser'
+  const ord = { grunnkretser: 'grunnkretser', delomrader: 'delområder', levekarssoner: 'levekårssoner' }[nivå]
   const stem =
     selectedKommuner.length === 1
       ? `${kommuneStem}-${ord}`
       : kommuneStem.endsWith('-kommuner')
         ? `${kommuneStem.slice(0, -'-kommuner'.length)}-${ord}`
         : `${ord}-i-${selectedKommuner.length}-kommuner`
-  return someDelomraderLeftOut ? `${stem}-utvalg` : stem
+  return someLeftOut ? `${stem}-utvalg` : stem
 }

@@ -14,7 +14,6 @@ import type { GruppeSeksjon } from './components/GruppeSelector'
 import { KommuneSelector } from './components/KommuneSelector'
 import { BydelSelector } from './components/BydelSelector'
 import { GrunnkretsSelector } from './components/GrunnkretsSelector'
-import type { Delomrade } from './components/GrunnkretsSelector'
 import { InndelingToggle } from './components/InndelingToggle'
 import type { Inndeling } from './components/InndelingToggle'
 import { GeometriSection } from './components/GeometriSection'
@@ -40,8 +39,8 @@ import {
   distriktSelectionFilenameStem,
   grunnkretsSelectionFilenameStem,
 } from './lib/filename'
-import { delomraderByKommune, grunnkretsFeatures } from './lib/grunnkretser'
-import type { FeatureArgs } from './lib/grunnkretser'
+import { grunnkretsFeatures, underomraderByKommune } from './lib/grunnkretser'
+import type { FeatureArgs, Underomrade } from './lib/grunnkretser'
 import { DISTRIKT_KINDS, toDistrikt } from './lib/distrikter'
 import type { DistriktProperties } from './lib/distrikter'
 import { nokkelKolonne } from './lib/kolonner'
@@ -58,6 +57,7 @@ import type {
   DelomradeProperties,
   GrunnkretsNivå,
   GrunnkretsProperties,
+  LevekarssoneProperties,
   KommuneGruppe,
   KommuneProperties,
 } from './lib/types'
@@ -111,7 +111,7 @@ function App() {
 /** Above this many features the download is only built when someone downloads it. */
 const LAZY_EXPORT_FEATURES = 2000
 
-const NO_DELOMRADER = new Set<string>()
+const NONE_LEFT_OUT = new Set<string>()
 
 interface WorkspaceProps {
   topology: NorwayTopologyType
@@ -146,6 +146,7 @@ function Workspace({
   const [inndeling, setInndeling] = useState<Inndeling>('administrativ')
   const [grunnkretsModus, setGrunnkretsModus] = useState(false)
   const [utelatteDelomrader, setUtelatteDelomrader] = useState<Set<string>>(new Set())
+  const [utelatteLevekarssoner, setUtelatteLevekarssoner] = useState<Set<string>>(new Set())
   const [grunnkretsNivå, setGrunnkretsNivå] = useState<GrunnkretsNivå>('grunnkretser')
 
   // Kommuner are grouped by fylke or by one of the district kinds. Each
@@ -233,30 +234,42 @@ function Workspace({
   const grunnkretsState = useGrunnkretser(grunnkretsFylker, brukerGrunnkretser)
   const kommuneByNummer = useMemo(() => new Map(kommuner.map((k) => [k.kommunenummer, k])), [kommuner])
 
-  const delomrader = useMemo(() => {
-    const merged = new Map<string, Delomrade[]>()
-    for (const t of grunnkretsState.topologies.values()) for (const [k, list] of delomraderByKommune(t)) merged.set(k, list)
+  // What can be left out: levekårssoner at that level, delområder at the
+  // other two (each keeps its own choices when switching level).
+  const underomradeNivå = grunnkretsNivå === 'levekarssoner' ? 'levekarssoner' : 'delomrader'
+  const underomrader = useMemo(() => {
+    const merged = new Map<string, Underomrade[]>()
+    for (const t of grunnkretsState.topologies.values()) {
+      for (const [k, list] of underomraderByKommune(t, underomradeNivå)) merged.set(k, list)
+    }
     return merged
-  }, [grunnkretsState.topologies])
+  }, [grunnkretsState.topologies, underomradeNivå])
+  const utelatte = underomradeNivå === 'levekarssoner' ? utelatteLevekarssoner : utelatteDelomrader
 
-  // Grunnkretser or delområder, whichever level is chosen.
+  // Grunnkretser, delområder or levekårssoner, whichever level is chosen.
   const selectedGrunnkretsFeatures = useMemo<
     | { nivå: 'grunnkretser'; features: FeatureCollection<AreaGeometry, GrunnkretsProperties> }
     | { nivå: 'delomrader'; features: FeatureCollection<AreaGeometry, DelomradeProperties> }
+    | { nivå: 'levekarssoner'; features: FeatureCollection<AreaGeometry, LevekarssoneProperties> }
   >(() => {
     const args: FeatureArgs = [
       [...grunnkretsState.topologies.values()],
       medHavgrense,
       minWeight,
       selection.selectedKommuner,
-      utelatteDelomrader,
+      utelatte,
       kommuneByNummer,
       gruppeKind,
     ]
     if (!brukerGrunnkretser) return { nivå: 'grunnkretser', features: { type: 'FeatureCollection', features: [] } }
-    return grunnkretsNivå === 'delomrader'
-      ? { nivå: 'delomrader', features: grunnkretsFeatures('delomrader', ...args) }
-      : { nivå: 'grunnkretser', features: grunnkretsFeatures('grunnkretser', ...args) }
+    switch (grunnkretsNivå) {
+      case 'levekarssoner':
+        return { nivå: 'levekarssoner', features: grunnkretsFeatures('levekarssoner', ...args) }
+      case 'delomrader':
+        return { nivå: 'delomrader', features: grunnkretsFeatures('delomrader', ...args) }
+      case 'grunnkretser':
+        return { nivå: 'grunnkretser', features: grunnkretsFeatures('grunnkretser', ...args) }
+    }
   }, [
     brukerGrunnkretser,
     grunnkretsNivå,
@@ -264,18 +277,19 @@ function Workspace({
     medHavgrense,
     minWeight,
     selection.selectedKommuner,
-    utelatteDelomrader,
+    utelatte,
     kommuneByNummer,
     gruppeKind,
   ])
-  const someDelomraderLeftOut = valgteKommuner.some((k) =>
-    (delomrader.get(k.kommunenummer) ?? []).some((d) => utelatteDelomrader.has(d.delomradenummer)),
+  const someLeftOut = valgteKommuner.some((k) =>
+    (underomrader.get(k.kommunenummer) ?? []).some((o) => utelatte.has(o.nummer)),
   )
 
-  function handleDelomraderChange(delomradenumre: string[], include: boolean) {
-    setUtelatteDelomrader((prev) => {
+  function handleUtelatteChange(numre: string[], include: boolean) {
+    const setUtelatte = underomradeNivå === 'levekarssoner' ? setUtelatteLevekarssoner : setUtelatteDelomrader
+    setUtelatte((prev) => {
       const next = new Set(prev)
-      for (const nr of delomradenumre) {
+      for (const nr of numre) {
         if (include) next.delete(nr)
         else next.add(nr)
       }
@@ -307,19 +321,26 @@ function Workspace({
     | { granularity: 'bydeler'; features: FeatureCollection<AreaGeometry, BydelProperties> }
     | { granularity: 'grunnkretser'; features: FeatureCollection<AreaGeometry, GrunnkretsProperties> }
     | { granularity: 'delomrader'; features: FeatureCollection<AreaGeometry, DelomradeProperties> }
+    | { granularity: 'levekarssoner'; features: FeatureCollection<AreaGeometry, LevekarssoneProperties> }
     | { granularity: DistriktKind; features: FeatureCollection<AreaGeometry, DistriktProperties> }
   >(() => {
-    if (effectiveGranularity === 'grunnkretser' || effectiveGranularity === 'delomrader') {
-      return selectedGrunnkretsFeatures.nivå === 'delomrader'
-        ? { granularity: 'delomrader', features: selectedGrunnkretsFeatures.features }
-        : { granularity: 'grunnkretser', features: selectedGrunnkretsFeatures.features }
+    if (brukerGrunnkretser) {
+      const { nivå, features } = selectedGrunnkretsFeatures
+      switch (nivå) {
+        case 'levekarssoner':
+          return { granularity: nivå, features }
+        case 'delomrader':
+          return { granularity: nivå, features }
+        case 'grunnkretser':
+          return { granularity: nivå, features }
+      }
     }
     if (effectiveGranularity === 'bydeler') return { granularity: 'bydeler', features: selectedBydelFeatures }
     if (effectiveGranularity === 'kommuner') return { granularity: 'kommuner', features: selectedFeatures }
     return contextAreas.kind === 'fylker'
       ? { granularity: 'fylker', features: contextAreas.features }
       : { granularity: contextAreas.kind, features: contextAreas.features }
-  }, [effectiveGranularity, contextAreas, selectedGrunnkretsFeatures, selectedBydelFeatures, selectedFeatures])
+  }, [brukerGrunnkretser, effectiveGranularity, contextAreas, selectedGrunnkretsFeatures, selectedBydelFeatures, selectedFeatures])
 
   // The download is normally built up front so its exact size can be shown,
   // but for thousands of grunnkretser that would make every click sluggish —
@@ -339,13 +360,14 @@ function Workspace({
         return fylkeSelectionFilenameStem(exportTarget.features.features.map((f) => f.properties))
       case 'grunnkretser':
       case 'delomrader':
+      case 'levekarssoner':
         return grunnkretsSelectionFilenameStem(
           exportTarget.granularity,
           valgteKommuner,
           gruppeKind,
           groups,
           kommunerByGroup,
-          someDelomraderLeftOut,
+          someLeftOut,
         )
       case 'bydeler':
         return bydelSelectionFilenameStem(
@@ -367,7 +389,7 @@ function Workspace({
           distrikter[exportTarget.granularity],
         )
     }
-  }, [exportTarget, kommuner, bydelsByKommune, gruppeKind, groups, kommunerByGroup, distrikter, valgteKommuner, someDelomraderLeftOut])
+  }, [exportTarget, kommuner, bydelsByKommune, gruppeKind, groups, kommunerByGroup, distrikter, valgteKommuner, someLeftOut])
 
   function handleDownload(filename: string) {
     const result = exportResult ?? (featureCount > 0 ? buildExport(exportTarget.features, exportTarget.granularity, format) : null)
@@ -382,7 +404,13 @@ function Workspace({
     [exportTarget],
   )
   const dataExample = (() => {
-    if (effectiveGranularity === 'grunnkretser' || effectiveGranularity === 'delomrader') return dataRows[0]
+    if (
+      effectiveGranularity === 'grunnkretser' ||
+      effectiveGranularity === 'delomrader' ||
+      effectiveGranularity === 'levekarssoner'
+    ) {
+      return dataRows[0]
+    }
     const objectName =
       effectiveGranularity === 'fylker' || effectiveGranularity === 'kommuner' || effectiveGranularity === 'bydeler'
         ? effectiveGranularity
@@ -447,8 +475,8 @@ function Workspace({
     [simplifiedTopology],
   )
 
-  // Grunnkretser/delområder for the map include the left-out delområder, so
-  // they can be clicked back in.
+  // Grunnkretser, delområder or levekårssoner for the map include the left-out
+  // ones, so they can be clicked back in.
   const kartGrunnkretser = useMemo(() => {
     if (!brukerGrunnkretser) return null
     const args: FeatureArgs = [
@@ -456,10 +484,19 @@ function Workspace({
       medHavgrense,
       minWeight,
       selection.selectedKommuner,
-      NO_DELOMRADER,
+      NONE_LEFT_OUT,
       kommuneByNummer,
       gruppeKind,
     ]
+    if (grunnkretsNivå === 'levekarssoner') {
+      return kartOmrader(grunnkretsFeatures('levekarssoner', ...args), (p) => ({
+        navn: p.levekarssonenavn,
+        nummer: p.levekarssonenummer,
+        kontekst: p.kommunenavn,
+        selected: !utelatteLevekarssoner.has(p.levekarssonenummer),
+        handling: { type: 'levekarssone', id: p.levekarssonenummer },
+      }))
+    }
     return grunnkretsNivå === 'delomrader'
       ? kartOmrader(grunnkretsFeatures('delomrader', ...args), (p) => ({
           navn: p.delomradenavn,
@@ -483,6 +520,7 @@ function Workspace({
     minWeight,
     selection.selectedKommuner,
     utelatteDelomrader,
+    utelatteLevekarssoner,
     kommuneByNummer,
     gruppeKind,
   ])
@@ -584,7 +622,8 @@ function Workspace({
       case 'bydel':
         return selection.toggleBydel(handling.id)
       case 'delomrade':
-        return handleDelomraderChange([handling.id], utelatteDelomrader.has(handling.id))
+      case 'levekarssone':
+        return handleUtelatteChange([handling.id], utelatte.has(handling.id))
     }
   })
 
@@ -596,7 +635,7 @@ function Workspace({
     [...selection.selectedGroups].sort().join(','),
     selection.selectedKommuner.size,
     selection.selectedBydeler.size,
-    utelatteDelomrader.size,
+    utelatte.size,
     featureCount,
   ].join('|')
 
@@ -666,9 +705,9 @@ function Workspace({
           nivå={grunnkretsNivå}
           onNivåChange={setGrunnkretsNivå}
           state={grunnkretsState}
-          delomraderByKommune={delomrader}
-          utelatteDelomrader={utelatteDelomrader}
-          onDelomraderChange={handleDelomraderChange}
+          underomraderByKommune={underomrader}
+          utelatte={utelatte}
+          onUtelatteChange={handleUtelatteChange}
         />
         {!brukerGrunnkretser && (
           <BydelSelector kommunerMedBydeler={kommunerMedBydeler} bydelsByKommune={bydelsByKommune} selection={selection} />

@@ -14,7 +14,8 @@
     "data:copy": "node data-pipeline/scripts/04-copy-to-app.mjs",
     "data:distrikter": "node data-pipeline/scripts/05-add-distrikter.mjs",
     "data:grunnkretser": "node --max-old-space-size=8192 data-pipeline/scripts/06-build-grunnkretser.mjs",
-    "data:build": "npm run data:download && npm run data:normalize && npm run data:topology && npm run data:copy && npm run data:distrikter && npm run data:grunnkretser",
+    "data:levekarssoner": "node --max-old-space-size=8192 data-pipeline/scripts/07-add-levekarssoner.mjs",
+    "data:build": "npm run data:download && npm run data:normalize && npm run data:topology && npm run data:copy && npm run data:distrikter && npm run data:grunnkretser && npm run data:levekarssoner",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist --dotfiles --no-history"
   },
