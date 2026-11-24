@@ -49,7 +49,7 @@ export const DISTRIKT_KINDS: Record<DistriktKind, DistriktKindInfo> = {
     artikkel: 'ett',
     kilde: 'DSB, Brannalarmsentraler',
     kildeUrl: 'https://kartkatalog.geonorge.no/metadata/c4436a5f-1e22-461a-8209-786f7052acb5',
-    idField: 'distrikt110id',
+    idField: 'distrikt110nummer',
     nameField: 'distrikt110navn',
     objects: { med: 'distrikter110', uten: 'distrikter110UtenHavgrense' },
   },

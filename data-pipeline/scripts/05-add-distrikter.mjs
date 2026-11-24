@@ -36,7 +36,8 @@
 //     DSB's Brannalarmsentraler dataset, which carries the current districts as
 //     polygons. Those polygons are only used to assign each kommune to a
 //     district by area overlap; anything short of near-total overlap fails the
-//     step rather than guessing.
+//     step rather than guessing. DSB's ids change when it republishes, so the
+//     district numbers are our own (source/distrikter110.csv), by DSB's names.
 //
 // Every assignment must cover exactly the bundled kommuner, one district each,
 // or the step fails.
@@ -83,10 +84,10 @@ const DISTRIKTER = [
   },
   {
     kind: 'distrikter110',
-    idField: 'distrikt110id',
+    idField: 'distrikt110nummer',
     nameField: 'distrikt110navn',
     sortBy: 'navn',
-    source: { type: 'dsb-110' },
+    source: { type: 'dsb-110', file: 'distrikter110.csv' },
   },
   {
     kind: 'valgdistrikter',
@@ -244,7 +245,7 @@ async function assign(distrikt) {
   const { source } = distrikt
   const { label, byKommune } =
     source.type === 'dsb-110'
-      ? await distrikt110Assignment()
+      ? await distrikt110Assignment(source)
       : source.type === 'csv-kommune'
         ? await csvKommuneAssignment(source)
         : source.type === 'ssb-fylke'
@@ -443,10 +444,9 @@ async function csvKommuneAssignment({ file, kommuneColumn, regionColumn }) {
 function parseDistrikt110Gml(gml) {
   const members = gml.match(/<app:Distrikt110 [\s\S]*?<\/app:Distrikt110>/g) ?? []
   return members.map((member) => {
-    const distrikt110id = /<app:lokalId>([^<]+)</.exec(member)?.[1]
     const distrikt110navn = /<app:navn>([^<]+)</.exec(member)?.[1]
     const polygons = member.match(/<gml:Polygon[\s\S]*?<\/gml:Polygon>/g) ?? []
-    if (!distrikt110id || !distrikt110navn || polygons.length !== 1 || /<gml:Multi/.test(member)) {
+    if (!distrikt110navn || polygons.length !== 1 || /<gml:Multi/.test(member)) {
       throw new Error(`Unexpected Distrikt110 feature structure: ${member.slice(0, 300)}`)
     }
     if (!polygons[0].includes('srsName="urn:ogc:def:crs:EPSG::4258"')) {
@@ -460,14 +460,41 @@ function parseDistrikt110Gml(gml) {
     })
     return {
       type: 'Feature',
-      properties: { distrikt110id, distrikt110navn },
+      properties: { distrikt110navn },
       geometry: { type: 'Polygon', coordinates: rings },
     }
   })
 }
 
+/**
+ * Our number for each of DSB's 110-distrikter, by name. Fails unless the table
+ * has exactly DSB's names, so a new, renamed or closed sentral is noticed.
+ */
+async function distrikt110Numre(file, distriktNavn) {
+  const numre = new Map()
+  const problems = []
+  for (const { nummer, navn } of parseCsv(await readFile(path.join(sourceDir, file), 'utf-8'))) {
+    if (!/^d\d{2}$/.test(nummer) || !navn) problems.push(`unreadable row: ${nummer},${navn}`)
+    if (numre.has(navn)) problems.push(`"${navn}" is listed twice`)
+    if ([...numre.values()].includes(nummer)) problems.push(`${nummer} is used twice`)
+    numre.set(navn, nummer)
+  }
+  if (new Set(distriktNavn).size !== distriktNavn.length) problems.push('DSB has several districts with the same name')
+  const missing = distriktNavn.filter((navn) => !numre.has(navn))
+  const unknown = [...numre.keys()].filter((navn) => !distriktNavn.includes(navn))
+  if (missing.length > 0) problems.push(`not in the table: ${missing.join(', ')}`)
+  if (unknown.length > 0) problems.push(`not at DSB any more: ${unknown.map((navn) => `${numre.get(navn)} ${navn}`).join(', ')}`)
+  if (problems.length > 0) {
+    throw new Error(
+      `${file}:\n  ${problems.join('\n  ')}\n` +
+        'Update the name if a district was renamed; give it a new number (never a used one) if the district itself changed.',
+    )
+  }
+  return numre
+}
+
 /** 110-distrikt per kommune, by largest area overlap with DSB's polygons. */
-async function distrikt110Assignment() {
+async function distrikt110Assignment({ file }) {
   const distrikter = await cached('distrikter110.geojson', async () => {
     console.log(`[download] ${DSB_110_WFS}`)
     const response = await fetch(DSB_110_WFS)
@@ -476,13 +503,14 @@ async function distrikt110Assignment() {
     if (features.length === 0) throw new Error('DSB WFS returned no Distrikt110 features')
     return { type: 'FeatureCollection', features }
   })
-  const distriktById = new Map(distrikter.features.map((f) => [f.properties.distrikt110id, f.properties]))
+  const distriktNavn = distrikter.features.map((f) => f.properties.distrikt110navn)
+  const numre = await distrikt110Numre(file, distriktNavn)
 
   // The coastline-clipped kommuner, so open sea doesn't dilute the shares.
   const kommuneCollection = topojsonClient.feature(topology, kommuneLayers.uten)
   const output = await mapshaper.applyCommands(
     '-i kommuner.json distrikter.json combine-files ' +
-      '-union fields=kommunenummer,distrikt110id ' +
+      '-union fields=kommunenummer,distrikt110navn ' +
       '-each "areal=this.area" ' +
       '-o union.json format=geojson',
     {
@@ -502,7 +530,7 @@ async function distrikt110Assignment() {
   for (const { properties } of JSON.parse(output['union.json']).features) {
     if (!properties.kommunenummer) continue
     const byDistrikt = arealByKommune.get(properties.kommunenummer) ?? new Map()
-    byDistrikt.set(properties.distrikt110id, (byDistrikt.get(properties.distrikt110id) ?? 0) + properties.areal)
+    byDistrikt.set(properties.distrikt110navn, (byDistrikt.get(properties.distrikt110navn) ?? 0) + properties.areal)
     arealByKommune.set(properties.kommunenummer, byDistrikt)
   }
 
@@ -511,13 +539,13 @@ async function distrikt110Assignment() {
   for (const { kommunenummer, kommunenavn } of kommuner) {
     const byDistrikt = arealByKommune.get(kommunenummer) ?? new Map()
     const total = [...byDistrikt.values()].reduce((sum, areal) => sum + areal, 0)
-    const [bestId, bestAreal] = [...byDistrikt].filter(([id]) => id).sort((a, b) => b[1] - a[1])[0] ?? []
-    const share = total > 0 && bestId ? bestAreal / total : 0
+    const [navn, bestAreal] = [...byDistrikt].filter(([name]) => name).sort((a, b) => b[1] - a[1])[0] ?? []
+    const share = total > 0 && navn ? bestAreal / total : 0
     if (share < MIN_110_SHARE) {
       problems.push(`${kommunenummer} ${kommunenavn} (${(share * 100).toFixed(1)} %)`)
       continue
     }
-    byKommune.set(kommunenummer, { id: bestId, navn: distriktById.get(bestId).distrikt110navn })
+    byKommune.set(kommunenummer, { id: numre.get(navn), navn })
   }
   if (problems.length > 0) {
     throw new Error(
@@ -525,10 +553,10 @@ async function distrikt110Assignment() {
     )
   }
 
-  const used = new Set([...byKommune.values()].map((v) => v.id))
-  const unused = [...distriktById.values()].filter((d) => !used.has(d.distrikt110id))
+  const used = new Set([...byKommune.values()].map((v) => v.navn))
+  const unused = distriktNavn.filter((navn) => !used.has(navn))
   if (unused.length > 0) {
-    throw new Error(`110-distrikter without any kommune: ${unused.map((d) => d.distrikt110navn).join(', ')}`)
+    throw new Error(`110-distrikter without any kommune: ${unused.join(', ')}`)
   }
 
   return { label: 'DSB Brannalarmsentraler (Distrikt110)', byKommune }

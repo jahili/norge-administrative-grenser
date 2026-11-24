@@ -100,7 +100,7 @@ export function useKartOmrader({
         const antall = kommunerByGroup.get(id)?.length ?? 0
         return {
           navn,
-          nummer: gruppeKind === 'distrikter110' ? '' : id,
+          nummer: id,
           kontekst: `${gruppeEntall} · ${antall} kommuner`,
           selected: selectedGroups.has(id),
           handling: { type: 'gruppe', id },
@@ -164,7 +164,6 @@ export function useKartOmrader({
     selectedBydeler,
     kommunerByGroup,
     groupTarget,
-    gruppeKind,
     gruppeEntall,
     granularity,
     bydelsByKommune,

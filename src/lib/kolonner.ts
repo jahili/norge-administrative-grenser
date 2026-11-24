@@ -1,5 +1,5 @@
 import { DISTRIKT_KIND_LIST, DISTRIKT_KINDS } from './distrikter'
-import type { ExportGranularity } from './types'
+import type { DistriktKind, ExportGranularity } from './types'
 
 export interface KolonneInfo {
   beskrivelse: string
@@ -54,6 +54,13 @@ const BASE_KOLONNER: Record<string, KolonneInfo> = {
   levekarssonenavn: { beskrivelse: 'Levekårssonens navn (f.eks. «Halden LKS 01»)' },
 }
 
+/** The codes that are not SSB's. */
+const EGNE_KODER: Partial<Record<DistriktKind, string>> = {
+  distrikter110:
+    'Nummer for 110-distriktet, «d01» til «d12». Laget av appen, siden DSB ikke har faste id-er; endres bare når distriktene endres',
+  baregioner: 'Nummer for BA-regionen i TØIs inndeling, 3 sifre som tekst (f.eks. «005»)',
+}
+
 /** Describes one exported column: fylke/kommune/bydel fields, or a district kind's id/name field. */
 export function kolonneInfo(kolonne: string): KolonneInfo | undefined {
   if (kolonne in BASE_KOLONNER) return BASE_KOLONNER[kolonne]
@@ -67,10 +74,7 @@ export function kolonneInfo(kolonne: string): KolonneInfo | undefined {
     const { idField, nameField, entall, kilde, kildeUrl } = DISTRIKT_KINDS[kind]
     if (kolonne === idField) {
       return {
-        beskrivelse:
-          kind === 'distrikter110'
-            ? `Id for ${entall}et (DSBs lokalId)`
-            : `Kode for ${entall} i SSBs klassifikasjon`,
+        beskrivelse: EGNE_KODER[kind] ?? `Kode for ${entall} i SSBs klassifikasjon`,
         kilde: { navn: kilde, url: kildeUrl },
       }
     }
