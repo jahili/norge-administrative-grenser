@@ -13,11 +13,12 @@ på engelsk.
 npm run dev        # utviklingsserver
 npm run build      # tsc -b + vite build (tar sekunder – tar det minutter, se «Fallgruver»)
 npm run lint       # eslint, inkl. react-hooks og react-refresh
+npm test           # enhetstester (Vitest): src/**/*.test.ts, også mot de committede kartdataene
 npm run deploy     # bygger og publiserer dist/ til gh-pages (--no-history: grenen har bare siste versjon)
 npm run data:build # hele datapipelinen, steg 01–07
 ```
 
-Før commit: `npx tsc -b && npx eslint . && npm run build`. `npm ci` skal fungere (hold
+Før commit: `npx tsc -b && npx eslint . && npm test && npm run build`. `npm ci` skal fungere (hold
 `package-lock.json` i takt med `package.json`).
 
 ## Arkitektur
@@ -105,7 +106,7 @@ Kommuner, grunnkretser og navn endres som regel 1. januar.
    (nye kommunenumre, sammenslåinger, delinger) – ellers stopper steg 05.
 4. Sammenlign med forrige versjon (antall lag, kommuner, endrede felter), oppdater «Kartdata 2026»
    (`KARTDATA_AAR` i `src/components/Header.tsx`) og lasteteksten med filstørrelsen i `App.tsx`.
-5. `npx tsc -b && npx eslint . && npm run build`, commit, `npm run deploy`.
+5. `npx tsc -b && npx eslint . && npm test && npm run build`, commit, `npm run deploy`.
 
 ## Praktisk
 

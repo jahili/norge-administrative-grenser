@@ -32,10 +32,16 @@ export function useSimplifiedTopology(
   // `minWeight` is returned too, so the separately loaded grunnkrets files can
   // be simplified with the same threshold (weights are planar areas in the
   // same lon/lat units, so they compare across files).
-  return useMemo(() => {
-    if (detailPercent >= 100) return { topology: presimplified, minWeight: 0 }
-    const quantile = detailPercent / 100
-    const minWeight = topojsonSimplify.quantile(presimplified, quantile)
-    return { topology: topojsonSimplify.simplify(presimplified, minWeight), minWeight }
-  }, [presimplified, detailPercent])
+  return useMemo(() => simplifyToDetail(presimplified, detailPercent), [presimplified, detailPercent])
+}
+
+/** The part of `useSimplifiedTopology` that depends on the detail level. */
+export function simplifyToDetail(
+  presimplified: NorwayTopologyType,
+  detailPercent: number,
+): { topology: NorwayTopologyType; minWeight: number } {
+  if (detailPercent >= 100) return { topology: presimplified, minWeight: 0 }
+  const quantile = detailPercent / 100
+  const minWeight = topojsonSimplify.quantile(presimplified, quantile)
+  return { topology: topojsonSimplify.simplify(presimplified, minWeight), minWeight }
 }

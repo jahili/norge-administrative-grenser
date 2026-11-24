@@ -6,7 +6,7 @@ import type { BydelProperties, KommuneGruppe, KommuneProperties } from '../lib/t
  * or 110-distrikter), then kommuner within the selected groups, then bydeler
  * within the selected kommuner.
  */
-interface SelectionState {
+export interface SelectionState {
   selectedGroups: Set<string>
   selectedKommuner: Set<string>
   selectedBydeler: Set<string>
@@ -40,7 +40,7 @@ function withoutBydelerFor(selectedBydeler: Set<string>, bydeler: BydelPropertie
   return next
 }
 
-function reducer(state: SelectionState, action: SelectionAction): SelectionState {
+export function reducer(state: SelectionState, action: SelectionAction): SelectionState {
   switch (action.type) {
     case 'toggle-group': {
       const selectedGroups = withToggled(state.selectedGroups, action.groupId)
@@ -126,14 +126,14 @@ function reducer(state: SelectionState, action: SelectionAction): SelectionState
   }
 }
 
-const initialState: SelectionState = {
+export const initialState: SelectionState = {
   selectedGroups: new Set(),
   selectedKommuner: new Set(),
   selectedBydeler: new Set(),
 }
 
 /** One independent selection per scope (inndeling), so switching scopes keeps each selection. */
-function scopedReducer(
+export function scopedReducer(
   states: Record<string, SelectionState>,
   { scope, action }: { scope: string; action: SelectionAction },
 ): Record<string, SelectionState> {

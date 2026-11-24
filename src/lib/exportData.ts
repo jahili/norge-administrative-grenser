@@ -110,11 +110,10 @@ function ringArea(ring: Position[]): number {
 
 /**
  * Two-dimensional positions, every exterior ring clockwise and every hole
- * counter-clockwise — the winding the bundled data uses, and what d3 expects. The detail
- * slider can
- * flip tiny islets (a few points, a few hundred m²) inside out, which tools
- * that honour winding would then draw as covering the rest of the world. At
- * full detail the points also carry their simplification weight as a third
+ * counter-clockwise — the winding the bundled data uses, and what d3 expects.
+ * The detail slider can flip tiny islets (a few points, a few hundred m²)
+ * inside out, which tools that honour winding would then draw as covering the
+ * rest of the world. At full detail the points also carry their simplification weight as a third
  * number (Infinity, so null in JSON, at the ends of every arc).
  */
 function withCleanRings<F extends FeatureCollection<AreaGeometry>>(collection: F): F {
