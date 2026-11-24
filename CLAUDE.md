@@ -91,6 +91,8 @@ ikke følger delområdegrensene).
   komponentfiler bare eksporterer komponenter – hjelpefunksjoner hører hjemme i `src/lib/`.
 - **Bash på Windows:** heredocs med mange anførselstegn og `${…}` blir lett feiltolket; skriv heller
   et skript til fil og kjør det.
+- **`npm test` fra `c:\` (liten bokstav):** Vitest finner da ingen tester («reading 'config'»). Kan skje i Git Bash;
+  kjør fra PowerShell.
 
 ## Årlig dataoppdatering (ved nyttår)
 
