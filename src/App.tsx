@@ -1,11 +1,11 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import * as topojsonClient from 'topojson-client'
 import { useTopology } from './hooks/useTopology'
 import type { NorwayTopologyType } from './hooks/useTopology'
 import { useSelection } from './hooks/useSelection'
 import { useSimplifiedTopology } from './hooks/useSimplifiedTopology'
 import { useGrunnkretser } from './hooks/useGrunnkretser'
+import { useLatest } from './hooks/useLatest'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useTheme } from './hooks/useTheme'
 import type { Theme } from './hooks/useTheme'
@@ -18,11 +18,16 @@ import { InndelingToggle } from './components/InndelingToggle'
 import type { Inndeling } from './components/InndelingToggle'
 import { GeometriSection } from './components/GeometriSection'
 import { MapView } from './components/MapView'
+import { DataButton, DataDrawer } from './components/DataDrawer'
 import { DataTabell } from './components/DataTabell'
+import { MobileLayout } from './components/MobileLayout'
+import type { MobileTab } from './components/MobileLayout'
+import { MobileMenu } from './components/MobileMenu'
+import { SelectionCard } from './components/SelectionCard'
 import { DownloadBar, DownloadButton, DownloadOptions } from './components/Nedlasting'
-import { dataColumns, levelWords } from './lib/format'
+import { capitalize, dataColumns, levelWords } from './lib/format'
 import type { DownloadState } from './components/Nedlasting'
-import { GITHUB_URL, Header, OmDataene, ThemeButton } from './components/Header'
+import { Header, OmDataene } from './components/Header'
 import { Logo, Spinner } from './components/ui'
 import {
   selectedFeatureCollection,
@@ -42,6 +47,7 @@ import {
 import { grunnkretsFeatures, underomraderByKommune } from './lib/grunnkretser'
 import type { FeatureArgs, Underomrade } from './lib/grunnkretser'
 import { DISTRIKT_KINDS, toDistrikt } from './lib/distrikter'
+import { fylkeRekkefolge } from './lib/grupper'
 import type { DistriktProperties } from './lib/distrikter'
 import { nokkelKolonne } from './lib/kolonner'
 import { kartOmrader } from './lib/kartlag'
@@ -816,247 +822,6 @@ function Workspace({
         </aside>
         <main className="h-[70vh] min-w-0 flex-[999_1_560px] min-[960px]:h-full">{map(false)}</main>
       </div>
-    </div>
-  )
-}
-
-/**
- * SSB's standard order of the fylker (roughly south-east to north), which is
- * how most Norwegian tables and lists present them — rather than by number.
- * Unknown numbers go last, by number.
- */
-const FYLKE_REKKEFOLGE = ['03', '32', '31', '33', '34', '39', '40', '42', '11', '46', '15', '50', '18', '55', '56']
-function fylkeRekkefolge(fylkesnummer: string): number {
-  const index = FYLKE_REKKEFOLGE.indexOf(fylkesnummer)
-  return index === -1 ? 100 + Number(fylkesnummer) : index
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1)
-}
-
-/**
- * A stable callback that always runs the latest version of `fn` — for event
- * handlers handed to the map, which binds them once per drawn layer.
- */
-function useLatest<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
-  const ref = useRef(fn)
-  useLayoutEffect(() => {
-    ref.current = fn
-  })
-  return useCallback((...args: A) => ref.current(...args), [])
-}
-
-/** Map overlay, top left: the selection, its size and «Zoom til utvalg». */
-function SelectionCard({
-  tittel,
-  detaljer,
-  onZoom,
-  kanZoome,
-}: {
-  tittel: string
-  detaljer: string
-  onZoom: () => void
-  kanZoome: boolean
-}) {
-  return (
-    <div className="flex max-w-full flex-wrap items-center gap-2.5 rounded-card border border-line bg-surface py-2 pr-2 pl-3.5 shadow-float">
-      <span className="font-semibold text-ink">{tittel}</span>
-      <span aria-live="polite" className="text-[13px] text-muted">
-        {detaljer}
-      </span>
-      <button
-        type="button"
-        onClick={onZoom}
-        disabled={!kanZoome}
-        className="h-8 cursor-pointer rounded-lg border border-line bg-surface px-3 text-[13px] text-ink-2 hover:bg-seg disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Zoom til utvalg
-      </button>
-    </div>
-  )
-}
-
-/** Map overlay, bottom left: opens the column table, with the key column in one line. */
-function DataButton({ nokkel, open, onToggle }: { nokkel: string; open: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={open}
-      aria-controls="data-skuff"
-      className="flex cursor-pointer items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 text-left text-ink shadow-float hover:bg-surface-2"
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-accent" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="16" rx="2" />
-        <path d="M3 10h18M9 10v10" />
-      </svg>
-      <span className="flex min-w-0 flex-col">
-        <span className="font-semibold">Data i filen</span>
-        <span className="truncate text-xs text-muted">
-          Nøkkel: <span className="font-mono">{nokkel}</span> (tekst, behold ledende null)
-        </span>
-      </span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={`shrink-0 text-ink-2 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
-        <path d="M6 15l6-6 6 6" />
-      </svg>
-    </button>
-  )
-}
-
-/** Drawer over the lower part of the map, holding the column table. */
-function DataDrawer({ onClose, children }: { onClose: () => void; children: ReactNode }) {
-  return (
-    <section
-      id="data-skuff"
-      aria-labelledby="data-skuff-tittel"
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose()
-      }}
-      className="absolute inset-x-4 bottom-4 z-[1002] flex max-h-[min(70%,640px)] flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[0_8px_32px_rgba(21,32,30,0.2)]"
-    >
-      <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-2">
-        <h2 id="data-skuff-tittel" className="text-[15px] font-semibold">
-          Data i filen
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Lukk data i filen"
-          className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-field text-ink-2 hover:bg-seg"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
-      </div>
-      <div className="overflow-auto px-5 py-4">{children}</div>
-    </section>
-  )
-}
-
-type MobileTab = 'utvalg' | 'geometri' | 'kolonner'
-
-/** Mobile: map on top, controls in a bottom sheet with tabs, fixed download button. */
-function MobileLayout({
-  map,
-  tab,
-  onTabChange,
-  utvalg,
-  geometri,
-  kolonner,
-  downloadButton,
-}: {
-  map: ReactNode
-  tab: MobileTab
-  onTabChange: (tab: MobileTab) => void
-  utvalg: ReactNode
-  geometri: ReactNode
-  kolonner: ReactNode
-  downloadButton: ReactNode
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const tabs: [MobileTab, string][] = [
-    ['utvalg', 'Utvalg'],
-    ['geometri', 'Geometri'],
-    ['kolonner', 'Kolonner'],
-  ]
-  return (
-    <div className="relative h-dvh overflow-hidden bg-sea">
-      <div className="absolute inset-x-0 top-0 h-[47dvh]">{map}</div>
-      <section
-        aria-label="Kontroller"
-        className={`absolute inset-x-0 bottom-0 z-[1100] flex flex-col rounded-t-[20px] bg-surface shadow-[0_-6px_24px_rgba(21,32,30,0.15)] transition-[top] duration-200 ${
-          expanded ? 'top-[10dvh]' : 'top-[43dvh]'
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          aria-expanded={expanded}
-          aria-label={expanded ? 'Vis mer av kartet' : 'Vis mer av panelet'}
-          className="flex h-6 w-full shrink-0 cursor-pointer items-center justify-center"
-        >
-          <span className="h-1 w-10 rounded-full bg-input" />
-        </button>
-        <div role="tablist" aria-label="Panel" className="flex shrink-0 gap-1.5 border-b border-line px-4">
-          {tabs.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              id={`fane-${value}`}
-              aria-selected={tab === value}
-              aria-controls={`panel-${value}`}
-              onClick={() => onTabChange(value)}
-              className={`h-11 cursor-pointer border-b-2 px-3 ${
-                tab === value ? 'border-accent font-semibold text-ink' : 'border-transparent text-muted'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div
-          role="tabpanel"
-          id={`panel-${tab}`}
-          aria-labelledby={`fane-${tab}`}
-          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3.5"
-        >
-          {tab === 'utvalg' ? utvalg : tab === 'geometri' ? geometri : kolonner}
-        </div>
-        <div className="shrink-0 border-t border-line bg-surface-2 px-4 pt-3 pb-[max(22px,env(safe-area-inset-bottom))]">
-          {downloadButton}
-        </div>
-      </section>
-    </div>
-  )
-}
-
-/** Mobile: the header links and theme toggle behind a menu button. */
-function MobileMenu({
-  theme,
-  onToggleTheme,
-  onOpenOm,
-  onOpenKolonner,
-}: {
-  theme: Theme
-  onToggleTheme: () => void
-  onOpenOm: () => void
-  onOpenKolonner: () => void
-}) {
-  const [open, setOpen] = useState(false)
-  const item = 'flex min-h-11 w-full cursor-pointer items-center px-4 text-left font-medium text-ink no-underline hover:bg-seg'
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        aria-label="Meny"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-card bg-surface text-ink shadow-float"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      </button>
-      {open && (
-        <div className="absolute top-12 right-0 w-56 overflow-hidden rounded-card border border-line bg-surface py-1 shadow-float">
-          <button type="button" className={item} onClick={() => (setOpen(false), onOpenOm())}>
-            Om dataene
-          </button>
-          <button type="button" className={item} onClick={() => (setOpen(false), onOpenKolonner())}>
-            Kolonner
-          </button>
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={item}>
-            GitHub
-          </a>
-          <div className="flex items-center justify-between px-4 py-1">
-            <span className="text-ink-2">Tema</span>
-            <ThemeButton theme={theme} onToggle={onToggleTheme} />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

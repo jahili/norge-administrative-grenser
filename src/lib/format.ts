@@ -24,3 +24,7 @@ export function dataColumns(rows: Record<string, string>[], example: Record<stri
   const sample = rows[0] ?? example
   return sample ? Object.keys(sample) : []
 }
+
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
