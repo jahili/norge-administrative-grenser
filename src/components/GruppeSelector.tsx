@@ -1,13 +1,7 @@
+import type { GruppeSeksjon } from '../lib/grupper'
 import type { KommuneGruppe } from '../lib/types'
 import type { SelectionApi } from '../hooks/useSelection'
 import { Chip, SectionHeader, TextButton } from './ui'
-
-/** A heading (e.g. a fylke) with the groups listed under it. */
-export interface GruppeSeksjon {
-  id: string
-  navn: string
-  groups: KommuneGruppe[]
-}
 
 interface GruppeSelectorProps {
   /** Heading, e.g. «Fylker» or «Politidistrikter». */

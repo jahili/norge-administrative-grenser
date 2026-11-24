@@ -1,16 +1,15 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
-import * as topojsonClient from 'topojson-client'
+import { useMemo, useState } from 'react'
 import { useTopology } from './hooks/useTopology'
-import type { NorwayTopologyType } from './hooks/useTopology'
+import type { NorwayTopology } from './hooks/useTopology'
 import { useSelection } from './hooks/useSelection'
 import { useSimplifiedTopology } from './hooks/useSimplifiedTopology'
-import { useGrunnkretser } from './hooks/useGrunnkretser'
+import { useGrunnkretsUtvalg } from './hooks/useGrunnkretsUtvalg'
+import { useExport } from './hooks/useExport'
+import { useKartOmrader } from './hooks/useKartOmrader'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useTheme } from './hooks/useTheme'
 import type { Theme } from './hooks/useTheme'
 import { GruppeSelector } from './components/GruppeSelector'
-import type { GruppeSeksjon } from './components/GruppeSelector'
 import { KommuneSelector } from './components/KommuneSelector'
 import { BydelSelector } from './components/BydelSelector'
 import { GrunnkretsSelector } from './components/GrunnkretsSelector'
@@ -18,50 +17,20 @@ import { InndelingToggle } from './components/InndelingToggle'
 import type { Inndeling } from './components/InndelingToggle'
 import { GeometriSection } from './components/GeometriSection'
 import { MapView } from './components/MapView'
+import { DataButton, DataDrawer } from './components/DataDrawer'
 import { DataTabell } from './components/DataTabell'
+import { MobileLayout } from './components/MobileLayout'
+import type { MobileTab } from './components/MobileLayout'
+import { MobileMenu } from './components/MobileMenu'
+import { SelectionCard } from './components/SelectionCard'
 import { DownloadBar, DownloadButton, DownloadOptions } from './components/Nedlasting'
-import { dataColumns, levelWords } from './lib/format'
-import type { DownloadState } from './components/Nedlasting'
-import { GITHUB_URL, Header, OmDataene, ThemeButton } from './components/Header'
+import { Header, OmDataene } from './components/Header'
 import { Logo, Spinner } from './components/ui'
-import {
-  selectedFeatureCollection,
-  selectedBydelFeatureCollection,
-  selectedDistriktFeatureCollection,
-  buildExport,
-  buildCsv,
-  downloadBlob,
-} from './lib/exportData'
-import {
-  selectionFilenameStem,
-  fylkeSelectionFilenameStem,
-  bydelSelectionFilenameStem,
-  distriktSelectionFilenameStem,
-  grunnkretsSelectionFilenameStem,
-} from './lib/filename'
-import { grunnkretsFeatures, underomraderByKommune } from './lib/grunnkretser'
-import type { FeatureArgs, Underomrade } from './lib/grunnkretser'
-import { DISTRIKT_KINDS, toDistrikt } from './lib/distrikter'
-import type { DistriktProperties } from './lib/distrikter'
+import { DISTRIKT_KINDS } from './lib/distrikter'
+import { dataColumns, utvalgDetaljer, utvalgTittel } from './lib/format'
+import { fylkeRekkefolge, fylkeSeksjoner } from './lib/grupper'
 import { nokkelKolonne } from './lib/kolonner'
-import { kartOmrader } from './lib/kartlag'
-import type { KartFeature, KartHandling } from './lib/kartlag'
-import type {
-  ExportFormat,
-  ExportGranularity,
-  AreaGeometry,
-  BydelProperties,
-  DistriktKind,
-  FylkeProperties,
-  GruppeKind,
-  DelomradeProperties,
-  GrunnkretsNivå,
-  GrunnkretsProperties,
-  LevekarssoneProperties,
-  KommuneGruppe,
-  KommuneProperties,
-} from './lib/types'
-import type { FeatureCollection } from 'geojson'
+import type { GruppeKind } from './lib/types'
 
 /** Below this width the layout switches to map-on-top with a bottom sheet. */
 const MOBILE_QUERY = '(max-width: 767px)'
@@ -108,19 +77,7 @@ function App() {
   )
 }
 
-/** Above this many features the download is only built when someone downloads it. */
-const LAZY_EXPORT_FEATURES = 2000
-
-const NONE_LEFT_OUT = new Set<string>()
-
-interface WorkspaceProps {
-  topology: NorwayTopologyType
-  fylker: FylkeProperties[]
-  kommuner: KommuneProperties[]
-  kommunerByFylke: Map<string, KommuneProperties[]>
-  bydelsByKommune: Map<string, BydelProperties[]>
-  distrikter: Record<DistriktKind, KommuneGruppe[]>
-  kommunerByDistrikt: Record<DistriktKind, Map<string, KommuneProperties[]>>
+interface WorkspaceProps extends NorwayTopology {
   theme: Theme
   onToggleTheme: () => void
   mobile: boolean
@@ -141,13 +98,8 @@ function Workspace({
   onOpenOm,
 }: WorkspaceProps) {
   const [detailPercent, setDetailPercent] = useState(100)
-  const [format, setFormat] = useState<ExportFormat>('geojson')
   const [medHavgrense, setMedHavgrense] = useState(false)
   const [inndeling, setInndeling] = useState<Inndeling>('administrativ')
-  const [grunnkretsModus, setGrunnkretsModus] = useState(false)
-  const [utelatteDelomrader, setUtelatteDelomrader] = useState<Set<string>>(new Set())
-  const [utelatteLevekarssoner, setUtelatteLevekarssoner] = useState<Set<string>>(new Set())
-  const [grunnkretsNivå, setGrunnkretsNivå] = useState<GrunnkretsNivå>('grunnkretser')
 
   // Kommuner are grouped by fylke or by one of the district kinds. Each
   // grouping keeps its own selection, so switching inndeling back and forth
@@ -167,136 +119,26 @@ function Workspace({
   const gruppeArtikkel = gruppeKind === 'fylker' ? 'ett' : DISTRIKT_KINDS[gruppeKind].artikkel
 
   // Divisions with many districts (e.g. 85 økonomiske regioner, 159
-  // BA-regioner) are listed under a fylke: the one most of a district's
-  // kommuner are in, so the few districts crossing a fylke border still land
-  // somewhere sensible.
-  const fylkeSeksjoner = useMemo<GruppeSeksjon[] | undefined>(() => {
-    if (gruppeKind === 'fylker' || !DISTRIKT_KINDS[gruppeKind].listeEtterFylke) return undefined
-    const byFylke = new Map<string, KommuneGruppe[]>()
-    for (const group of groups) {
-      const counts = new Map<string, number>()
-      for (const k of kommunerByGroup.get(group.id) ?? []) counts.set(k.fylkesnummer, (counts.get(k.fylkesnummer) ?? 0) + 1)
-      const [fylkesnummer] = [...counts].sort((a, b) => b[1] - a[1] || fylkeRekkefolge(a[0]) - fylkeRekkefolge(b[0]))[0] ?? []
-      if (!fylkesnummer) continue
-      byFylke.set(fylkesnummer, [...(byFylke.get(fylkesnummer) ?? []), group])
-    }
-    return fylkeGrupper
-      .filter((fylke) => byFylke.has(fylke.id))
-      .map((fylke) => ({ ...fylke, groups: byFylke.get(fylke.id) ?? [] }))
-  }, [gruppeKind, groups, kommunerByGroup, fylkeGrupper])
+  // BA-regioner) are listed under a fylke.
+  const seksjoner = useMemo(
+    () =>
+      gruppeKind !== 'fylker' && DISTRIKT_KINDS[gruppeKind].listeEtterFylke
+        ? fylkeSeksjoner(groups, kommunerByGroup, fylkeGrupper)
+        : undefined,
+    [gruppeKind, groups, kommunerByGroup, fylkeGrupper],
+  )
 
   const { topology: simplifiedTopology, minWeight } = useSimplifiedTopology(topology, detailPercent)
 
-  const kommuneObject = medHavgrense ? 'kommuner' : 'kommunerUtenHavgrense'
-  const fylkeObject = medHavgrense ? 'fylker' : 'fylkerUtenHavgrense'
-
-  const selectedFeatures = useMemo(
-    () => selectedFeatureCollection(simplifiedTopology, kommuneObject, selection.selectedKommuner),
-    [simplifiedTopology, kommuneObject, selection.selectedKommuner],
-  )
-
-  // The selected groups as areas: fylker, or the chosen district kind.
-  const contextAreas = useMemo<
-    | { kind: 'fylker'; features: FeatureCollection<AreaGeometry, FylkeProperties> }
-    | { kind: DistriktKind; features: FeatureCollection<AreaGeometry, DistriktProperties> }
-  >(() => {
-    if (gruppeKind !== 'fylker') {
-      return {
-        kind: gruppeKind,
-        features: selectedDistriktFeatureCollection(simplifiedTopology, gruppeKind, medHavgrense, selection.selectedGroups),
-      }
-    }
-    const all = topojsonClient.feature(simplifiedTopology, simplifiedTopology.objects[fylkeObject]) as FeatureCollection<
-      AreaGeometry,
-      FylkeProperties
-    >
-    return {
-      kind: 'fylker',
-      features: {
-        type: 'FeatureCollection',
-        features: all.features.filter((f) => selection.selectedGroups.has(f.properties.fylkesnummer)),
-      },
-    }
-  }, [simplifiedTopology, gruppeKind, medHavgrense, fylkeObject, selection.selectedGroups])
-
-  const selectedBydelFeatures = useMemo(
-    () => selectedBydelFeatureCollection(simplifiedTopology, selection.selectedBydeler),
-    [simplifiedTopology, selection.selectedBydeler],
-  )
-
-  // --- Grunnkretser: fetched per fylke, only once asked for ---
-  const valgteKommuner = useMemo(
-    () => kommuner.filter((k) => selection.selectedKommuner.has(k.kommunenummer)),
-    [kommuner, selection.selectedKommuner],
-  )
-  const brukerGrunnkretser = grunnkretsModus && valgteKommuner.length > 0
-  const grunnkretsFylker = useMemo(() => [...new Set(valgteKommuner.map((k) => k.fylkesnummer))], [valgteKommuner])
-  const grunnkretsState = useGrunnkretser(grunnkretsFylker, brukerGrunnkretser)
   const kommuneByNummer = useMemo(() => new Map(kommuner.map((k) => [k.kommunenummer, k])), [kommuner])
-
-  // What can be left out: levekårssoner at that level, delområder at the
-  // other two (each keeps its own choices when switching level).
-  const underomradeNivå = grunnkretsNivå === 'levekarssoner' ? 'levekarssoner' : 'delomrader'
-  const underomrader = useMemo(() => {
-    const merged = new Map<string, Underomrade[]>()
-    for (const t of grunnkretsState.topologies.values()) {
-      for (const [k, list] of underomraderByKommune(t, underomradeNivå)) merged.set(k, list)
-    }
-    return merged
-  }, [grunnkretsState.topologies, underomradeNivå])
-  const utelatte = underomradeNivå === 'levekarssoner' ? utelatteLevekarssoner : utelatteDelomrader
-
-  // Grunnkretser, delområder or levekårssoner, whichever level is chosen.
-  const selectedGrunnkretsFeatures = useMemo<
-    | { nivå: 'grunnkretser'; features: FeatureCollection<AreaGeometry, GrunnkretsProperties> }
-    | { nivå: 'delomrader'; features: FeatureCollection<AreaGeometry, DelomradeProperties> }
-    | { nivå: 'levekarssoner'; features: FeatureCollection<AreaGeometry, LevekarssoneProperties> }
-  >(() => {
-    const args: FeatureArgs = [
-      [...grunnkretsState.topologies.values()],
-      medHavgrense,
-      minWeight,
-      selection.selectedKommuner,
-      utelatte,
-      kommuneByNummer,
-      gruppeKind,
-    ]
-    if (!brukerGrunnkretser) return { nivå: 'grunnkretser', features: { type: 'FeatureCollection', features: [] } }
-    switch (grunnkretsNivå) {
-      case 'levekarssoner':
-        return { nivå: 'levekarssoner', features: grunnkretsFeatures('levekarssoner', ...args) }
-      case 'delomrader':
-        return { nivå: 'delomrader', features: grunnkretsFeatures('delomrader', ...args) }
-      case 'grunnkretser':
-        return { nivå: 'grunnkretser', features: grunnkretsFeatures('grunnkretser', ...args) }
-    }
-  }, [
-    brukerGrunnkretser,
-    grunnkretsNivå,
-    grunnkretsState.topologies,
+  const grunnkretser = useGrunnkretsUtvalg({
+    kommuner,
+    kommuneByNummer,
+    selectedKommuner: selection.selectedKommuner,
+    gruppeKind,
     medHavgrense,
     minWeight,
-    selection.selectedKommuner,
-    utelatte,
-    kommuneByNummer,
-    gruppeKind,
-  ])
-  const someLeftOut = valgteKommuner.some((k) =>
-    (underomrader.get(k.kommunenummer) ?? []).some((o) => utelatte.has(o.nummer)),
-  )
-
-  function handleUtelatteChange(numre: string[], include: boolean) {
-    const setUtelatte = underomradeNivå === 'levekarssoner' ? setUtelatteLevekarssoner : setUtelatteDelomrader
-    setUtelatte((prev) => {
-      const next = new Set(prev)
-      for (const nr of numre) {
-        if (include) next.delete(nr)
-        else next.add(nr)
-      }
-      return next
-    })
-  }
-
+  })
   const kommunerMedBydeler = useMemo(
     () =>
       kommuner.filter(
@@ -305,357 +147,51 @@ function Workspace({
     [kommuner, selection.selectedKommuner, bydelsByKommune],
   )
 
-  // Granularity follows the deepest selection level the user has made —
-  // no separate radio button needed.
-  const effectiveGranularity: ExportGranularity = (() => {
-    if (brukerGrunnkretser) return grunnkretsNivå
-    if (selection.selectedBydeler.size > 0) return 'bydeler'
-    if (selection.selectedKommuner.size > 0) return 'kommuner'
-    if (selection.selectedGroups.size > 0) return gruppeKind
-    return gruppeKind === 'fylker' ? 'kommuner' : gruppeKind
-  })()
-
-  const exportTarget = useMemo<
-    | { granularity: 'fylker'; features: FeatureCollection<AreaGeometry, FylkeProperties> }
-    | { granularity: 'kommuner'; features: FeatureCollection<AreaGeometry, KommuneProperties> }
-    | { granularity: 'bydeler'; features: FeatureCollection<AreaGeometry, BydelProperties> }
-    | { granularity: 'grunnkretser'; features: FeatureCollection<AreaGeometry, GrunnkretsProperties> }
-    | { granularity: 'delomrader'; features: FeatureCollection<AreaGeometry, DelomradeProperties> }
-    | { granularity: 'levekarssoner'; features: FeatureCollection<AreaGeometry, LevekarssoneProperties> }
-    | { granularity: DistriktKind; features: FeatureCollection<AreaGeometry, DistriktProperties> }
-  >(() => {
-    if (brukerGrunnkretser) {
-      const { nivå, features } = selectedGrunnkretsFeatures
-      switch (nivå) {
-        case 'levekarssoner':
-          return { granularity: nivå, features }
-        case 'delomrader':
-          return { granularity: nivå, features }
-        case 'grunnkretser':
-          return { granularity: nivå, features }
-      }
-    }
-    if (effectiveGranularity === 'bydeler') return { granularity: 'bydeler', features: selectedBydelFeatures }
-    if (effectiveGranularity === 'kommuner') return { granularity: 'kommuner', features: selectedFeatures }
-    return contextAreas.kind === 'fylker'
-      ? { granularity: 'fylker', features: contextAreas.features }
-      : { granularity: contextAreas.kind, features: contextAreas.features }
-  }, [brukerGrunnkretser, effectiveGranularity, contextAreas, selectedGrunnkretsFeatures, selectedBydelFeatures, selectedFeatures])
-
-  // The download is normally built up front so its exact size can be shown,
-  // but for thousands of grunnkretser that would make every click sluggish —
-  // then it is only built when someone actually downloads.
-  const featureCount = exportTarget.features.features.length
-  const buildOnDownload = featureCount > LAZY_EXPORT_FEATURES
-  const exportResult = useMemo(
-    () =>
-      featureCount > 0 && !buildOnDownload ? buildExport(exportTarget.features, exportTarget.granularity, format) : null,
-    [exportTarget, format, featureCount, buildOnDownload],
-  )
-
-  const filenameStem = useMemo(() => {
-    if (exportTarget.features.features.length === 0) return null
-    switch (exportTarget.granularity) {
-      case 'fylker':
-        return fylkeSelectionFilenameStem(exportTarget.features.features.map((f) => f.properties))
-      case 'grunnkretser':
-      case 'delomrader':
-      case 'levekarssoner':
-        return grunnkretsSelectionFilenameStem(
-          exportTarget.granularity,
-          valgteKommuner,
-          gruppeKind,
-          groups,
-          kommunerByGroup,
-          someLeftOut,
-        )
-      case 'bydeler':
-        return bydelSelectionFilenameStem(
-          exportTarget.features.features.map((f) => f.properties),
-          bydelsByKommune,
-          kommuner,
-        )
-      case 'kommuner':
-        return selectionFilenameStem(
-          exportTarget.features.features.map((f) => f.properties),
-          gruppeKind,
-          groups,
-          kommunerByGroup,
-        )
-      default:
-        return distriktSelectionFilenameStem(
-          exportTarget.granularity,
-          exportTarget.features.features.map((f) => toDistrikt(f.properties)),
-          distrikter[exportTarget.granularity],
-        )
-    }
-  }, [exportTarget, kommuner, bydelsByKommune, gruppeKind, groups, kommunerByGroup, distrikter, valgteKommuner, someLeftOut])
-
-  function handleDownload(filename: string) {
-    const result = exportResult ?? (featureCount > 0 ? buildExport(exportTarget.features, exportTarget.granularity, format) : null)
-    if (!result) return
-    downloadBlob(result.blob, filename)
-  }
-
-  // The attribute table of the export, and one feature's properties at the
-  // same level so the columns can be explored before anything is selected.
-  const dataRows = useMemo(
-    () => exportTarget.features.features.map((f) => f.properties as Record<string, string>),
-    [exportTarget],
-  )
-  const dataExample = (() => {
-    if (
-      effectiveGranularity === 'grunnkretser' ||
-      effectiveGranularity === 'delomrader' ||
-      effectiveGranularity === 'levekarssoner'
-    ) {
-      return dataRows[0]
-    }
-    const objectName =
-      effectiveGranularity === 'fylker' || effectiveGranularity === 'kommuner' || effectiveGranularity === 'bydeler'
-        ? effectiveGranularity
-        : DISTRIKT_KINDS[effectiveGranularity].objects.med
-    return topology.objects[objectName].geometries[0]?.properties as Record<string, string> | undefined
-  })()
-
-  function handleDownloadCsv(columns: string[]) {
-    downloadBlob(buildCsv(columns, dataRows), `${filenameStem ?? effectiveGranularity}.csv`)
-  }
-
-  // --- Filename: what the user typed, reset whenever the suggestion changes ---
-  const [stemState, setStemState] = useState<{ forDefault: string | null; value: string }>({ forDefault: null, value: '' })
-  const stem = stemState.forDefault === filenameStem ? stemState.value : ''
-
-  const download: DownloadState = {
-    format,
-    onFormatChange: setFormat,
-    stem,
-    onStemChange: (value) => setStemState({ forDefault: filenameStem, value }),
-    defaultStem: filenameStem,
-    granularity: effectiveGranularity,
-    featureCount,
-    bytes: exportResult ? exportResult.blob.size : buildOnDownload ? 'senere' : null,
-    onDownload: handleDownload,
-  }
-
-  // --- The map: every area that can be clicked, with its selection state ---
-  const groupTarget = effectiveGranularity === gruppeKind
-  const gruppeEntall =
-    gruppeKind === 'fylker' ? 'Fylke' : capitalize(DISTRIKT_KINDS[gruppeKind].entall)
-
-  const alleGrupper = useMemo(() => {
-    if (gruppeKind === 'fylker') {
-      return topojsonClient.feature(simplifiedTopology, simplifiedTopology.objects[fylkeObject]) as FeatureCollection<
-        AreaGeometry,
-        FylkeProperties | DistriktProperties
-      >
-    }
-    const { objects } = DISTRIKT_KINDS[gruppeKind]
-    return topojsonClient.feature(
-      simplifiedTopology,
-      simplifiedTopology.objects[medHavgrense ? objects.med : objects.uten],
-    ) as FeatureCollection<AreaGeometry, FylkeProperties | DistriktProperties>
-  }, [simplifiedTopology, gruppeKind, fylkeObject, medHavgrense])
-
-  const alleKommuner = useMemo(
-    () =>
-      topojsonClient.feature(simplifiedTopology, simplifiedTopology.objects[kommuneObject]) as FeatureCollection<
-        AreaGeometry,
-        KommuneProperties
-      >,
-    [simplifiedTopology, kommuneObject],
-  )
-
-  const alleBydeler = useMemo(
-    () =>
-      topojsonClient.feature(simplifiedTopology, simplifiedTopology.objects.bydeler) as FeatureCollection<
-        AreaGeometry,
-        BydelProperties
-      >,
-    [simplifiedTopology],
-  )
-
-  // Grunnkretser, delområder or levekårssoner for the map include the left-out
-  // ones, so they can be clicked back in.
-  const kartGrunnkretser = useMemo(() => {
-    if (!brukerGrunnkretser) return null
-    const args: FeatureArgs = [
-      [...grunnkretsState.topologies.values()],
-      medHavgrense,
-      minWeight,
-      selection.selectedKommuner,
-      NONE_LEFT_OUT,
-      kommuneByNummer,
-      gruppeKind,
-    ]
-    if (grunnkretsNivå === 'levekarssoner') {
-      return kartOmrader(grunnkretsFeatures('levekarssoner', ...args), (p) => ({
-        navn: p.levekarssonenavn,
-        nummer: p.levekarssonenummer,
-        kontekst: p.kommunenavn,
-        selected: !utelatteLevekarssoner.has(p.levekarssonenummer),
-        handling: { type: 'levekarssone', id: p.levekarssonenummer },
-      }))
-    }
-    return grunnkretsNivå === 'delomrader'
-      ? kartOmrader(grunnkretsFeatures('delomrader', ...args), (p) => ({
-          navn: p.delomradenavn,
-          nummer: p.delomradenummer,
-          kontekst: p.kommunenavn,
-          selected: !utelatteDelomrader.has(p.delomradenummer),
-          handling: { type: 'delomrade', id: p.delomradenummer },
-        }))
-      : kartOmrader(grunnkretsFeatures('grunnkretser', ...args), (p) => ({
-          navn: p.grunnkretsnavn,
-          nummer: p.grunnkretsnummer,
-          kontekst: `${p.kommunenavn} · ${p.delomradenavn}`,
-          selected: !utelatteDelomrader.has(p.delomradenummer),
-          handling: { type: 'delomrade', id: p.delomradenummer },
-        }))
-  }, [
-    brukerGrunnkretser,
-    grunnkretsNivå,
-    grunnkretsState.topologies,
+  const eksport = useExport({
+    topology,
+    simplifiedTopology,
+    kommuner,
+    bydelsByKommune,
+    distrikter,
     medHavgrense,
-    minWeight,
-    selection.selectedKommuner,
-    utelatteDelomrader,
-    utelatteLevekarssoner,
-    kommuneByNummer,
     gruppeKind,
-  ])
-
-  const kartOmraderSamlet = useMemo<FeatureCollection<AreaGeometry, KartFeature['properties']>>(() => {
-    const features: KartFeature[] = []
-    const kommunerIValgteGrupper = new Set(
-      [...selection.selectedGroups].flatMap((id) => (kommunerByGroup.get(id) ?? []).map((k) => k.kommunenummer)),
-    )
-    const kommunerMedGrunnkretser = new Set(
-      kartGrunnkretser?.map((f) => f.properties.handling.id.slice(0, 4)) ?? [],
-    )
-
-    // Groups: unselected ones are always clickable; selected ones are drawn
-    // themselves only while they are what gets downloaded.
-    features.push(
-      ...kartOmrader(alleGrupper, (p) => {
-        const { id, navn } = 'fylkesnummer' in p ? { id: p.fylkesnummer as string, navn: p.fylkesnavn as string } : toDistrikt(p)
-        const antall = kommunerByGroup.get(id)?.length ?? 0
-        return {
-          navn,
-          nummer: gruppeKind === 'distrikter110' ? '' : id,
-          kontekst: `${gruppeEntall} · ${antall} kommuner`,
-          selected: selection.selectedGroups.has(id),
-          handling: { type: 'gruppe', id },
-        }
-      }).filter((f) => groupTarget || !f.properties.selected),
-    )
-
-    if (!groupTarget) {
-      features.push(
-        ...kartOmrader(
-          {
-            type: 'FeatureCollection',
-            features: alleKommuner.features.filter((f) => {
-              const nr = f.properties.kommunenummer
-              if (!kommunerIValgteGrupper.has(nr)) return false
-              const valgt = selection.selectedKommuner.has(nr)
-              if (valgt && kartGrunnkretser && kommunerMedGrunnkretser.has(nr)) return false
-              if (valgt && effectiveGranularity === 'bydeler' && bydelsByKommune.has(nr)) return false
-              return true
-            }),
-          },
-          (p) => ({
-            navn: p.kommunenavn,
-            nummer: p.kommunenummer,
-            kontekst: p.fylkesnavn,
-            selected: selection.selectedKommuner.has(p.kommunenummer),
-            handling: { type: 'kommune', id: p.kommunenummer },
-          }),
-        ),
-      )
-      if (effectiveGranularity === 'bydeler') {
-        features.push(
-          ...kartOmrader(
-            {
-              type: 'FeatureCollection',
-              features: alleBydeler.features.filter((f) => selection.selectedKommuner.has(f.properties.kommunenummer)),
-            },
-            (p) => ({
-              navn: p.bydelnavn,
-              nummer: p.bydelnummer,
-              kontekst: kommuneByNummer.get(p.kommunenummer)?.kommunenavn ?? '',
-              selected: selection.selectedBydeler.has(p.bydelnummer),
-              handling: { type: 'bydel', id: p.bydelnummer },
-            }),
-          ),
-        )
-      }
-      if (kartGrunnkretser) features.push(...kartGrunnkretser)
-    }
-
-    // Selected areas last, so their outlines are drawn on top.
-    features.sort((a, b) => Number(a.properties.selected) - Number(b.properties.selected))
-    return { type: 'FeatureCollection', features }
-  }, [
-    alleGrupper,
-    alleKommuner,
-    alleBydeler,
-    kartGrunnkretser,
-    selection.selectedGroups,
-    selection.selectedKommuner,
-    selection.selectedBydeler,
+    groups,
     kommunerByGroup,
-    groupTarget,
+    selection,
+    grunnkretser,
+  })
+  const { granularity, featureCount, download, dataRows, dataExample } = eksport
+
+  const { omrader, onHandling } = useKartOmrader({
+    simplifiedTopology,
+    medHavgrense,
     gruppeKind,
-    gruppeEntall,
-    effectiveGranularity,
+    kommunerByGroup,
     bydelsByKommune,
     kommuneByNummer,
-  ])
-
-  const handleKartHandling = useLatest((handling: KartHandling) => {
-    switch (handling.type) {
-      case 'gruppe':
-        return selection.toggleGroup(handling.id)
-      case 'kommune':
-        return selection.toggleKommune(handling.id)
-      case 'bydel':
-        return selection.toggleBydel(handling.id)
-      case 'delomrade':
-      case 'levekarssone':
-        return handleUtelatteChange([handling.id], utelatte.has(handling.id))
-    }
+    selection,
+    grunnkretser,
+    granularity,
   })
 
-  const fitTarget: FeatureCollection<AreaGeometry> =
-    featureCount > 0 && !groupTarget ? exportTarget.features : contextAreas.features
+  const fitTarget = featureCount > 0 && granularity !== gruppeKind ? eksport.features : eksport.gruppeFeatures
   const fitKey = [
     gruppeKind,
-    effectiveGranularity,
+    granularity,
     [...selection.selectedGroups].sort().join(','),
     selection.selectedKommuner.size,
     selection.selectedBydeler.size,
-    utelatte.size,
+    grunnkretser.utelatte.size,
     featureCount,
   ].join('|')
 
   // --- Text for the map card and the «Data i filen» button ---
-  const columns = dataColumns(dataRows, dataExample)
-  const nokkel = nokkelKolonne(effectiveGranularity)
-  const valgteGruppeNavn = groups.filter((g) => selection.selectedGroups.has(g.id)).map((g) => g.navn)
-  const kortTittel =
-    valgteGruppeNavn.length === 0
-      ? 'Ingen utvalg ennå'
-      : valgteGruppeNavn.length <= 2
-        ? valgteGruppeNavn.join(' og ')
-        : `${valgteGruppeNavn.slice(0, 2).join(', ')} +${valgteGruppeNavn.length - 2}`
-  const { entall, flertall } = levelWords(effectiveGranularity)
+  const nokkel = nokkelKolonne(granularity)
+  const kortTittel = utvalgTittel(groups.filter((g) => selection.selectedGroups.has(g.id)).map((g) => g.navn))
   const kortDetaljer =
-    grunnkretsState.loading.length > 0
+    grunnkretser.state.loading.length > 0
       ? 'Laster grunnkretser …'
-      : featureCount === 0
-        ? 'Klikk i kartet eller velg i listen'
-        : `${featureCount} ${featureCount === 1 ? entall : flertall} · ${columns.length} kolonner`
+      : utvalgDetaljer(granularity, featureCount, dataColumns(dataRows, dataExample).length)
 
   const [dataOpen, setDataOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<MobileTab>('utvalg')
@@ -670,7 +206,7 @@ function Workspace({
         tittel={gruppeKind === 'fylker' ? 'Fylker' : DISTRIKT_KINDS[gruppeKind].tittel}
         groups={groups}
         selection={selection}
-        sections={fylkeSeksjoner}
+        sections={seksjoner}
         scrollRow={mobileVariant}
         number={mobileVariant ? undefined : '02'}
         note={
@@ -699,17 +235,17 @@ function Workspace({
           uncapped={mobileVariant}
         />
         <GrunnkretsSelector
-          kommuner={valgteKommuner}
-          enabled={grunnkretsModus}
-          onEnabledChange={setGrunnkretsModus}
-          nivå={grunnkretsNivå}
-          onNivåChange={setGrunnkretsNivå}
-          state={grunnkretsState}
-          underomraderByKommune={underomrader}
-          utelatte={utelatte}
-          onUtelatteChange={handleUtelatteChange}
+          kommuner={grunnkretser.valgteKommuner}
+          enabled={grunnkretser.enabled}
+          onEnabledChange={grunnkretser.setEnabled}
+          nivå={grunnkretser.nivå}
+          onNivåChange={grunnkretser.setNivå}
+          state={grunnkretser.state}
+          underomraderByKommune={grunnkretser.underomrader}
+          utelatte={grunnkretser.utelatte}
+          onUtelatteChange={grunnkretser.changeUtelatte}
         />
-        {!brukerGrunnkretser && (
+        {!grunnkretser.active && (
           <BydelSelector kommunerMedBydeler={kommunerMedBydeler} bydelsByKommune={bydelsByKommune} selection={selection} />
         )}
       </div>
@@ -723,13 +259,13 @@ function Workspace({
         number={mobileVariant ? undefined : '04'}
       />
     ),
-    data: <DataTabell granularity={effectiveGranularity} rows={dataRows} example={dataExample} onDownloadCsv={handleDownloadCsv} />,
+    data: <DataTabell granularity={granularity} rows={dataRows} example={dataExample} onDownloadCsv={eksport.downloadCsv} />,
   })
 
   const map = (mobileVariant: boolean) => (
     <MapView
-      omrader={kartOmraderSamlet}
-      onHandling={handleKartHandling}
+      omrader={omrader}
+      onHandling={onHandling}
       fitTarget={fitTarget}
       fitKey={fitKey}
       theme={theme}
@@ -816,247 +352,6 @@ function Workspace({
         </aside>
         <main className="h-[70vh] min-w-0 flex-[999_1_560px] min-[960px]:h-full">{map(false)}</main>
       </div>
-    </div>
-  )
-}
-
-/**
- * SSB's standard order of the fylker (roughly south-east to north), which is
- * how most Norwegian tables and lists present them — rather than by number.
- * Unknown numbers go last, by number.
- */
-const FYLKE_REKKEFOLGE = ['03', '32', '31', '33', '34', '39', '40', '42', '11', '46', '15', '50', '18', '55', '56']
-function fylkeRekkefolge(fylkesnummer: string): number {
-  const index = FYLKE_REKKEFOLGE.indexOf(fylkesnummer)
-  return index === -1 ? 100 + Number(fylkesnummer) : index
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1)
-}
-
-/**
- * A stable callback that always runs the latest version of `fn` — for event
- * handlers handed to the map, which binds them once per drawn layer.
- */
-function useLatest<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
-  const ref = useRef(fn)
-  useLayoutEffect(() => {
-    ref.current = fn
-  })
-  return useCallback((...args: A) => ref.current(...args), [])
-}
-
-/** Map overlay, top left: the selection, its size and «Zoom til utvalg». */
-function SelectionCard({
-  tittel,
-  detaljer,
-  onZoom,
-  kanZoome,
-}: {
-  tittel: string
-  detaljer: string
-  onZoom: () => void
-  kanZoome: boolean
-}) {
-  return (
-    <div className="flex max-w-full flex-wrap items-center gap-2.5 rounded-card border border-line bg-surface py-2 pr-2 pl-3.5 shadow-float">
-      <span className="font-semibold text-ink">{tittel}</span>
-      <span aria-live="polite" className="text-[13px] text-muted">
-        {detaljer}
-      </span>
-      <button
-        type="button"
-        onClick={onZoom}
-        disabled={!kanZoome}
-        className="h-8 cursor-pointer rounded-lg border border-line bg-surface px-3 text-[13px] text-ink-2 hover:bg-seg disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Zoom til utvalg
-      </button>
-    </div>
-  )
-}
-
-/** Map overlay, bottom left: opens the column table, with the key column in one line. */
-function DataButton({ nokkel, open, onToggle }: { nokkel: string; open: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={open}
-      aria-controls="data-skuff"
-      className="flex cursor-pointer items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 text-left text-ink shadow-float hover:bg-surface-2"
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-accent" aria-hidden="true">
-        <rect x="3" y="4" width="18" height="16" rx="2" />
-        <path d="M3 10h18M9 10v10" />
-      </svg>
-      <span className="flex min-w-0 flex-col">
-        <span className="font-semibold">Data i filen</span>
-        <span className="truncate text-xs text-muted">
-          Nøkkel: <span className="font-mono">{nokkel}</span> (tekst, behold ledende null)
-        </span>
-      </span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={`shrink-0 text-ink-2 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
-        <path d="M6 15l6-6 6 6" />
-      </svg>
-    </button>
-  )
-}
-
-/** Drawer over the lower part of the map, holding the column table. */
-function DataDrawer({ onClose, children }: { onClose: () => void; children: ReactNode }) {
-  return (
-    <section
-      id="data-skuff"
-      aria-labelledby="data-skuff-tittel"
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose()
-      }}
-      className="absolute inset-x-4 bottom-4 z-[1002] flex max-h-[min(70%,640px)] flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[0_8px_32px_rgba(21,32,30,0.2)]"
-    >
-      <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-2">
-        <h2 id="data-skuff-tittel" className="text-[15px] font-semibold">
-          Data i filen
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Lukk data i filen"
-          className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-field text-ink-2 hover:bg-seg"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
-        </button>
-      </div>
-      <div className="overflow-auto px-5 py-4">{children}</div>
-    </section>
-  )
-}
-
-type MobileTab = 'utvalg' | 'geometri' | 'kolonner'
-
-/** Mobile: map on top, controls in a bottom sheet with tabs, fixed download button. */
-function MobileLayout({
-  map,
-  tab,
-  onTabChange,
-  utvalg,
-  geometri,
-  kolonner,
-  downloadButton,
-}: {
-  map: ReactNode
-  tab: MobileTab
-  onTabChange: (tab: MobileTab) => void
-  utvalg: ReactNode
-  geometri: ReactNode
-  kolonner: ReactNode
-  downloadButton: ReactNode
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const tabs: [MobileTab, string][] = [
-    ['utvalg', 'Utvalg'],
-    ['geometri', 'Geometri'],
-    ['kolonner', 'Kolonner'],
-  ]
-  return (
-    <div className="relative h-dvh overflow-hidden bg-sea">
-      <div className="absolute inset-x-0 top-0 h-[47dvh]">{map}</div>
-      <section
-        aria-label="Kontroller"
-        className={`absolute inset-x-0 bottom-0 z-[1100] flex flex-col rounded-t-[20px] bg-surface shadow-[0_-6px_24px_rgba(21,32,30,0.15)] transition-[top] duration-200 ${
-          expanded ? 'top-[10dvh]' : 'top-[43dvh]'
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          aria-expanded={expanded}
-          aria-label={expanded ? 'Vis mer av kartet' : 'Vis mer av panelet'}
-          className="flex h-6 w-full shrink-0 cursor-pointer items-center justify-center"
-        >
-          <span className="h-1 w-10 rounded-full bg-input" />
-        </button>
-        <div role="tablist" aria-label="Panel" className="flex shrink-0 gap-1.5 border-b border-line px-4">
-          {tabs.map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              id={`fane-${value}`}
-              aria-selected={tab === value}
-              aria-controls={`panel-${value}`}
-              onClick={() => onTabChange(value)}
-              className={`h-11 cursor-pointer border-b-2 px-3 ${
-                tab === value ? 'border-accent font-semibold text-ink' : 'border-transparent text-muted'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div
-          role="tabpanel"
-          id={`panel-${tab}`}
-          aria-labelledby={`fane-${tab}`}
-          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-3.5"
-        >
-          {tab === 'utvalg' ? utvalg : tab === 'geometri' ? geometri : kolonner}
-        </div>
-        <div className="shrink-0 border-t border-line bg-surface-2 px-4 pt-3 pb-[max(22px,env(safe-area-inset-bottom))]">
-          {downloadButton}
-        </div>
-      </section>
-    </div>
-  )
-}
-
-/** Mobile: the header links and theme toggle behind a menu button. */
-function MobileMenu({
-  theme,
-  onToggleTheme,
-  onOpenOm,
-  onOpenKolonner,
-}: {
-  theme: Theme
-  onToggleTheme: () => void
-  onOpenOm: () => void
-  onOpenKolonner: () => void
-}) {
-  const [open, setOpen] = useState(false)
-  const item = 'flex min-h-11 w-full cursor-pointer items-center px-4 text-left font-medium text-ink no-underline hover:bg-seg'
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        aria-label="Meny"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-card bg-surface text-ink shadow-float"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      </button>
-      {open && (
-        <div className="absolute top-12 right-0 w-56 overflow-hidden rounded-card border border-line bg-surface py-1 shadow-float">
-          <button type="button" className={item} onClick={() => (setOpen(false), onOpenOm())}>
-            Om dataene
-          </button>
-          <button type="button" className={item} onClick={() => (setOpen(false), onOpenKolonner())}>
-            Kolonner
-          </button>
-          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={item}>
-            GitHub
-          </a>
-          <div className="flex items-center justify-between px-4 py-1">
-            <span className="text-ink-2">Tema</span>
-            <ThemeButton theme={theme} onToggle={onToggleTheme} />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

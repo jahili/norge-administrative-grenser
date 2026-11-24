@@ -51,8 +51,11 @@ normalt ikke å oppdateres.
   meningen; ikke svekk valideringen for å få det til å gå.
 
 **App (`src/`):**
-- `App.tsx` – `Workspace` holder all tilstand og avledet data (utvalg, eksportmål, kartlag,
-  filnavn) og velger desktop- eller mobiloppsett (`useMediaQuery`, < 768 px).
+- `App.tsx` – `Workspace` kobler sammen hookene under og velger desktop- eller mobiloppsett (`useMediaQuery`,
+  < 768 px).
+- `hooks/useGrunnkretsUtvalg.ts` – grunnkretsnivået: av/på, nivå, utelatte områder.
+- `hooks/useExport.ts` – eksportmål, filnavn, bygging og nedlasting, datatabellen.
+- `hooks/useKartOmrader.ts` – områdene på kartet med valgstatus, og hva et klikk gjør.
 - `hooks/useSelection.ts` – utvalg per inndeling (gruppe → kommuner → bydeler), én tilstand per
   inndeling så de ikke påvirker hverandre.
 - Eksportnivået følger det dypeste valget: grunnkretser/delområder/levekårssoner > bydeler > kommuner
