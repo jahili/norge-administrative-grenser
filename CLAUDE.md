@@ -113,5 +113,6 @@ Kommuner, grunnkretser og navn endres som regel 1. januar.
 ## Praktisk
 
 - Push og publisering krever GitHub-kontoen **jahili** (`gh auth switch` hvis en annen er aktiv).
-- Ingen CI: bygging og publisering skjer lokalt med `npm run deploy`.
+- CI (`.github/workflows/check.yml`) kjører `npm ci`, typesjekk, lint, tester og bygg på pull requests og push til
+  `master`. Publisering skjer fortsatt lokalt med `npm run deploy`.
 - Åpne oppgaver ligger som issues på GitHub.

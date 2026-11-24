@@ -19,4 +19,15 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['**/*.{js,mjs}'],
+    extends: [js.configs.recommended],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      // Leaving a property out with a rest pattern is intentional.
+      'no-unused-vars': ['error', { ignoreRestSiblings: true }],
+    },
+  },
 ])
