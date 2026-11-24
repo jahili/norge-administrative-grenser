@@ -16,7 +16,7 @@ Dette kjører, i rekkefølge:
 | Steg | Script | Hva det gjør |
 | --- | --- | --- |
 | 1 | `data:download` | Laster ned kommune- og fylkedatasettene fra Geonorge, og SSBs kommune- og fylkesnavn (`data-pipeline/raw/`) |
-| 2 | `data:normalize` | Renser bort alle felter unntatt nummer og navn for kommune og fylke (norsk og fullt offisielt navn) (`data-pipeline/work/`) |
+| 2 | `data:normalize` | Renser bort alle felter unntatt nummer og navn for kommune og fylke (norsk og fullt offisielt navn), og klipper kommunene etter kystlinjen (`data-pipeline/work/`) |
 | 3 | `data:topology` | Slår sammen til delt topologi, forenkler geometrien til ~20 % og skriver TopoJSON med presimplifiseringsdata |
 | 4 | `data:copy` | Kopierer resultatet til `src/assets/norge-grenser.topojson` |
 | 5 | `data:distrikter` | Merker kommunene med distriktene sine i elleve inndelinger (SSB, og DSB for 110), og legger til distriktlag slått sammen av kommunene, direkte i `src/assets/norge-grenser.topojson` |
@@ -112,6 +112,17 @@ kjøres.
   «Grense»). Steg 1 finner derfor GeoJSON-filen i arkivet selv, og steg 2
   godtar begge oppsettene og beholder bare flatene. Geometrien er uendret: et
   nytt bygg i oktober 2026 ga en byte-identisk fil.
+- **Landmasken (kommuner uten havgrense)**: Steg 2 lager kommunene uten
+  havgrense ved å klippe de nedlastede kommunene mot en fast landmaske,
+  `source/landmaske.geojson`. Kystlinjen endrer seg lite, mens kommunene endres
+  jevnlig, så masken trenger normalt ikke å oppdateres: sammenslåinger, delinger,
+  grensejusteringer og nye numre følger med av seg selv. Fylkene uten havgrense
+  lages av disse kommunene i steg 3. Masken er slått sammen av en fil med
+  Kartverkets kommuner klippet etter kystlinjen (uttrekk 2025-12-10), laget av
+  Robert Hopland. Overgangen til klipping ga de samme punktene i alle lag i
+  hovedfilen som før. Steget stopper hvis en kommune ikke har noe areal på
+  masken, eller hvis kommunene ikke dekker den (avvik over 0,01 %). Nytt land
+  utenfor masken, for eksempel utfyllinger, kommer ikke med.
 - **Grunnkretser (steg 6)**: 14 126 grunnkretser er for mye å legge i
   hovedfilen uten at hele appen blir tregere, så de ligger i én fil per fylke
   (0,4–1,9 MB, totalt ~16 MB / ~4 MB komprimert) som appen bare henter når

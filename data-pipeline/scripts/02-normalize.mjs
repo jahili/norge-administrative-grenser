@@ -27,10 +27,11 @@
 //    derive fylkesnummer from it and look up the matching fylke's name from
 //    the (already-normalized) fylke dataset.
 //
-// The "uten havgrense" layers are user-provided Basisdata files (committed to
-// data-pipeline/source/) clipped to the actual coastline. They share the same
-// property format as the main Basisdata files, so the same normalization
-// functions apply to both variants.
+// The "uten havgrense" kommuner are the downloaded kommuner clipped to a fixed
+// land mask committed to data-pipeline/source/ (see data-pipeline/README.md).
+// The coastline hardly changes, while kommuner do — clipping on every build
+// keeps the two variants in step. (Fylker uten havgrense are derived from
+// these kommuner in step 03.)
 
 import { createRequire } from 'node:module'
 import { existsSync } from 'node:fs'
@@ -40,6 +41,7 @@ import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const { feature: topoFeature } = require('topojson-client')
+const mapshaper = require('mapshaper')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rawDir = path.join(__dirname, '..', 'raw')
@@ -175,55 +177,49 @@ if (navnFraSsb.size > 0) {
   console.log(`[done] official names from SSB, where Kartverket's extract is behind: ${[...navnFraSsb].join('; ')}`)
 }
 
-// --- "Uten havgrense" layers (coastline-clipped, no maritime border extension) ---
+// --- "Uten havgrense" kommuner (coastline-clipped, no maritime border extension) ---
 
-const kommuneUtenRaw = await readGeonorgeCollection('kommuner-uten-havgrense.geojson', 'Kommune')
+/** Share of the land mask the clipped kommuner may leave uncovered (it is 0 for the 2026 data). */
+const MAX_UNCOVERED_LAND = 0.0001
 
-const kommuneFeaturesUtenHavgrense = kommuneUtenRaw.features
-  .map((feature) => normalizeKommune(feature.properties, feature.geometry))
-  .sort(byNummer('kommunenummer'))
+const clipped = await mapshaper.applyCommands(
+  [
+    '-i kommuner.json landmaske.json combine-files',
+    '-clip landmaske target=kommuner',
+    '-filter "!this.isNull" target=kommuner',
+    '-o uten.json format=geojson target=kommuner',
+    '-each "areal=this.area" target=kommuner,landmaske',
+    '-o areal-kommuner.json format=json target=kommuner',
+    '-o areal-landmaske.json format=json target=landmaske',
+  ].join(' '),
+  {
+    'kommuner.json': { type: 'FeatureCollection', features: kommuneFeatures },
+    'landmaske.json': await readFile(path.join(sourceDir, 'landmaske.geojson'), 'utf-8'),
+  },
+)
+const kommunerUtenHavgrense = JSON.parse(clipped['uten.json'])
 
-if (kommuneFeaturesUtenHavgrense.length !== kommuneFeatures.length) {
+const medLand = new Set(kommunerUtenHavgrense.features.map((f) => f.properties.kommunenummer))
+const utenLand = kommuneFeatures.filter((f) => !medLand.has(f.properties.kommunenummer))
+if (utenLand.length > 0) {
   throw new Error(
-    `"Uten havgrense" kommune layer has ${kommuneFeaturesUtenHavgrense.length} features, ` +
-      `expected ${kommuneFeatures.length} to match the main kommune layer`,
+    `Kommuner with no area on the land mask: ${utenLand.map((f) => `${f.properties.kommunenummer} ${f.properties.kommunenavn}`).join(', ')}`,
   )
 }
 
-await writeFile(
-  path.join(workDir, 'kommuner-uten-havgrense.geojson'),
-  JSON.stringify({ type: 'FeatureCollection', features: kommuneFeaturesUtenHavgrense }),
-)
-
-const fylkeUtenRaw = await readGeonorgeCollection('fylker-uten-havgrense.geojson', 'Fylke')
-
-const fylkeFeaturesUtenHavgrense = fylkeUtenRaw.features
-  .map((feature) => ({
-    type: 'Feature',
-    properties: {
-      fylkesnummer: feature.properties.fylkesnummer,
-      fylkesnavn: primaryName(feature.properties, 'fylkesnavn'),
-      fylkesnavnOffisielt: officialName(feature.properties, 'fylkesnavn', 'fylker', feature.properties.fylkesnummer),
-    },
-    geometry: feature.geometry,
-  }))
-  .sort(byNummer('fylkesnummer'))
-
-if (fylkeFeaturesUtenHavgrense.length !== fylkeFeatures.length) {
-  throw new Error(
-    `"Uten havgrense" fylke layer has ${fylkeFeaturesUtenHavgrense.length} features, ` +
-      `expected ${fylkeFeatures.length} to match the main fylke layer`,
-  )
+// Land that no kommune covers means the download is incomplete, or that the
+// mask and the kommuner no longer describe the same country.
+const sumAreal = (file) => JSON.parse(clipped[file]).reduce((sum, row) => sum + row.areal, 0)
+const uncovered = 1 - sumAreal('areal-kommuner.json') / sumAreal('areal-landmaske.json')
+if (Math.abs(uncovered) > MAX_UNCOVERED_LAND) {
+  throw new Error(`The kommuner cover ${((1 - uncovered) * 100).toFixed(3)} % of the land mask, expected 100 %`)
 }
 
-await writeFile(
-  path.join(workDir, 'fylker-uten-havgrense.geojson'),
-  JSON.stringify({ type: 'FeatureCollection', features: fylkeFeaturesUtenHavgrense }),
-)
+await writeFile(path.join(workDir, 'kommuner-uten-havgrense.geojson'), JSON.stringify(kommunerUtenHavgrense))
 
 console.log(
-  `[done] normalized ${kommuneFeaturesUtenHavgrense.length} "uten havgrense" kommuner and ` +
-    `${fylkeFeaturesUtenHavgrense.length} "uten havgrense" fylker`,
+  `[done] clipped ${kommunerUtenHavgrense.features.length} kommuner to the coastline ` +
+    `(covering ${((1 - uncovered) * 100).toFixed(4)} % of the land mask)`,
 )
 
 // --- Bydeler / delområder ---

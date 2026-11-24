@@ -35,6 +35,10 @@ topologi og forenkling (mapshaper) → 04 kopier til `src/assets` → 05 distrik
 mot de ferdige grunnkretsfilene (06 skriver dem på nytt uten soner, så 07 må alltid kjøres etter 06). Nedlastinger caches i
 `data-pipeline/raw/` (gitignored); slett den for å hente på nytt.
 
+**Uten havgrense:** Steg 02 klipper de nedlastede kommunene mot en fast landmaske
+(`data-pipeline/source/landmaske.geojson`), så kommuneendringer følger med av seg selv. Masken trenger
+normalt ikke å oppdateres.
+
 **Distriktinndelinger** (politidistrikter, 110-distrikter, valgdistrikter, BA-regioner m.fl.):
 - Alle består av hele kommuner. Steg 05 merker hver kommune med distriktet sitt og slår kommunene
   sammen til distriktlag med `topojson-client` `mergeArcs`, så grensene sammenfaller nøyaktig.

@@ -188,6 +188,8 @@ Grunnlagsdataene er samlet i [Kart-fylker-og-kommuner-json](https://github.com/j
   (koblingstabell mot fylkesinndelingen)
 - **110-distrikter:** [DSB, Brannalarmsentraler](https://kartkatalog.geonorge.no/metadata/c4436a5f-1e22-461a-8209-786f7052acb5)
   (SSBs egen 110-klassifikasjon er fra 2019 og mangler kobling mot kommuner)
+- **Kystlinje (uten havgrense):** Robert Hopland har laget kommunene klippet etter kystlinjen, som
+  [landmasken](data-pipeline/source/landmaske.geojson) er slått sammen av
 - Klipping og konvertering av kildedata er gjort i [Mapshaper](https://mapshaper.org/)
 
 Kartverkets data er tilgjengelig under åpen lisens (CC BY 4.0) — se
