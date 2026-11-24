@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Theme } from '../hooks/useTheme'
 import { GITHUB_URL, ThemeButton } from './Header'
 
-/** Mobile: the header links and theme toggle behind a menu button. */
+/**
+ * Mobile: the header links and theme toggle behind a menu button. Closes with
+ * Escape or a press outside, leaving the focus on the menu button.
+ */
 export function MobileMenu({
   theme,
   onToggleTheme,
@@ -15,10 +18,36 @@ export function MobileMenu({
   onOpenKolonner: () => void
 }) {
   const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  function close() {
+    setOpen(false)
+    buttonRef.current?.focus({ preventScroll: true })
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close()
+    }
+    const onPointerDown = (e: PointerEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) close()
+    }
+    // Capturing, so the map can't stop the event first.
+    document.addEventListener('keydown', onKeyDown, true)
+    document.addEventListener('pointerdown', onPointerDown, true)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true)
+      document.removeEventListener('pointerdown', onPointerDown, true)
+    }
+  }, [open])
+
   const item = 'flex min-h-11 w-full cursor-pointer items-center px-4 text-left font-medium text-ink no-underline hover:bg-seg'
   return (
-    <div className="relative">
+    <div ref={menuRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         aria-label="Meny"
         aria-expanded={open}
@@ -31,10 +60,10 @@ export function MobileMenu({
       </button>
       {open && (
         <div className="absolute top-12 right-0 w-56 overflow-hidden rounded-card border border-line bg-surface py-1 shadow-float">
-          <button type="button" className={item} onClick={() => (setOpen(false), onOpenOm())}>
+          <button type="button" className={item} onClick={() => (close(), onOpenOm())}>
             Om dataene
           </button>
-          <button type="button" className={item} onClick={() => (setOpen(false), onOpenKolonner())}>
+          <button type="button" className={item} onClick={() => (close(), onOpenKolonner())}>
             Kolonner
           </button>
           <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className={item}>
