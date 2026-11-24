@@ -112,7 +112,8 @@ Kommuner, grunnkretser og navn endres som regel 1. januar.
    fra 2019, kodet om til kommunestrukturen 2024. Endres kommunestrukturen, må tabellen kodes om
    (nye kommunenumre, sammenslåinger, delinger) – ellers stopper steg 05.
 4. Sammenlign med forrige versjon (antall lag, kommuner, endrede felter), oppdater «Kartdata 2026»
-   (`KARTDATA_AAR` i `src/components/Header.tsx`) og lasteteksten med filstørrelsen i `App.tsx`.
+   (`KARTDATA_AAR` i `src/components/Header.tsx`) og lasteteksten i `App.tsx` hvis filen ikke lenger er
+   ca. 2 MB komprimert (GitHub Pages sender den med gzip).
 5. `npx tsc -b && npx eslint . && npm test && npm run build`, commit, `npm run deploy`.
 
 ## Praktisk

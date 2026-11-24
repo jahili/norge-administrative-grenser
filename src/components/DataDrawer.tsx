@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 
 /** Map overlay, bottom left: opens the column table, with the key column in one line. */
@@ -27,14 +28,32 @@ export function DataButton({ nokkel, open, onToggle }: { nokkel: string; open: b
   )
 }
 
-/** Drawer over the lower part of the map, holding the column table. */
+/**
+ * Drawer over the lower part of the map, holding the column table. Takes the
+ * focus when it opens, and gives it back to whatever opened it when closed.
+ */
 export function DataDrawer({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const openerRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    // Safari doesn't focus a clicked button; fall back to «Data i filen».
+    const active = document.activeElement
+    openerRef.current =
+      active instanceof HTMLButtonElement ? active : document.querySelector<HTMLElement>('[aria-controls="data-skuff"]')
+    closeRef.current?.focus({ preventScroll: true })
+  }, [])
+
+  function close() {
+    onClose()
+    openerRef.current?.focus({ preventScroll: true })
+  }
+
   return (
     <section
       id="data-skuff"
       aria-labelledby="data-skuff-tittel"
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose()
+        if (e.key === 'Escape') close()
       }}
       className="absolute inset-x-4 bottom-4 z-[1002] flex max-h-[min(70%,640px)] flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[0_8px_32px_rgba(21,32,30,0.2)]"
     >
@@ -43,8 +62,9 @@ export function DataDrawer({ onClose, children }: { onClose: () => void; childre
           Data i filen
         </h2>
         <button
+          ref={closeRef}
           type="button"
-          onClick={onClose}
+          onClick={close}
           aria-label="Lukk data i filen"
           className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-field text-ink-2 hover:bg-seg"
         >
