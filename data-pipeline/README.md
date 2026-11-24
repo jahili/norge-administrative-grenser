@@ -112,6 +112,25 @@ kjøres.
   «Grense»). Steg 1 finner derfor GeoJSON-filen i arkivet selv, og steg 2
   godtar begge oppsettene og beholder bare flatene. Geometrien er uendret: et
   nytt bygg i oktober 2026 ga en byte-identisk fil.
+- **Kystlinjefilen (kommuner uten havgrense)**: Kommunene klippet etter
+  kystlinjen kan ikke lastes ned fra Geonorge på samme måte som hovedfilen, så
+  de ligger committet i `source/kommuner-uten-havgrense.geojson`. Steg 1
+  kopierer filen til `raw/`, så **den følger ikke med når kommunene endres**,
+  og den må byttes ut for hånd. Fylkene uten havgrense lages av disse kommunene
+  i steg 3, så det trengs ingen egen fylkesfil. Den gamle
+  `fylker-uten-havgrense.geojson` var ikke klippet og ble aldri brukt, og den
+  er fjernet. Filen må
+  - være Kartverkets Basisdata for kommuner (`objtype` «Kommune») med de
+    vanlige feltene, inkludert `kommunenummer`,
+    `identifikasjon.Identifikasjon.lokalId`, `…versjonId` og
+    `datauttaksdato`,
+  - komme fra **samme uttrekk** som filen steg 1 laster ned.
+
+  Steg 2 sammenligner hver kommunes `lokalId` og `versjonId` med nedlastingen.
+  Kartverket endrer `versjonId` når en kommune endres. Steget stopper hvis en
+  kommune mangler, er duplisert, ikke lenger finnes eller har en annen versjon
+  enn i nedlastingen, og skriver ut uttrekksdatoene for begge filene.
+  Uttrekket fra 2025-12-10 stemmer med kartdataene for 2026.
 - **Grunnkretser (steg 6)**: 14 126 grunnkretser er for mye å legge i
   hovedfilen uten at hele appen blir tregere, så de ligger i én fil per fylke
   (0,4–1,9 MB, totalt ~16 MB / ~4 MB komprimert) som appen bare henter når

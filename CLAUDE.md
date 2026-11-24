@@ -92,16 +92,20 @@ ikke følger delområdegrensene).
 Kommuner, grunnkretser og navn endres som regel 1. januar.
 
 1. Slett `data-pipeline/raw/` og kjør `npm run data:build`.
-2. Les kontrollene i utskriften: kommuner uten distrikt (SSB-tabeller som ikke er oppdatert ennå),
+2. **Kystlinjefilen** (`data-pipeline/source/kommuner-uten-havgrense.geojson`) lastes ikke ned, men er
+   committet. Den må komme fra samme Kartverket-uttrekk som nedlastingen, og steg 02 stopper hvis en kommune
+   er endret (annen `versjonId`), mangler eller er ny. Bytt da filen ut (se `data-pipeline/README.md`) –
+   ikke svekk kontrollen.
+3. Les kontrollene i utskriften: kommuner uten distrikt (SSB-tabeller som ikke er oppdatert ennå),
    arealkontrollen for grunnkretser, og hvilke navn som er hentet fra SSB. Stopper steg 07 fordi
    levekårssonene viser til grunnkretser som ikke finnes lenger, har SSB ikke publisert en LKS-versjon
    for den nye grunnkretsinndelingen ennå.
-3. **BA-regionene** (`data-pipeline/source/bo_og_arbeidsmarkedsregioner_2024.csv`) er TØIs inndeling
+4. **BA-regionene** (`data-pipeline/source/bo_og_arbeidsmarkedsregioner_2024.csv`) er TØIs inndeling
    fra 2019, kodet om til kommunestrukturen 2024. Endres kommunestrukturen, må tabellen kodes om
    (nye kommunenumre, sammenslåinger, delinger) – ellers stopper steg 05.
-4. Sammenlign med forrige versjon (antall lag, kommuner, endrede felter), oppdater «Kartdata 2026»
+5. Sammenlign med forrige versjon (antall lag, kommuner, endrede felter), oppdater «Kartdata 2026»
    (`KARTDATA_AAR` i `src/components/Header.tsx`) og lasteteksten med filstørrelsen i `App.tsx`.
-5. `npx tsc -b && npx eslint . && npm run build`, commit, `npm run deploy`.
+6. `npx tsc -b && npx eslint . && npm run build`, commit, `npm run deploy`.
 
 ## Praktisk
 

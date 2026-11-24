@@ -44,10 +44,8 @@ const zipSources = [
 ]
 
 // Files in source/ are committed to the repository and simply copied to raw/.
-const fileSources = [
-  { name: 'kommuner-uten-havgrense' },
-  { name: 'fylker-uten-havgrense' },
-]
+// (Fylker uten havgrense are derived from these kommuner in step 03.)
+const fileSources = [{ name: 'kommuner-uten-havgrense' }]
 
 await mkdir(rawDir, { recursive: true })
 

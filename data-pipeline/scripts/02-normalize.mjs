@@ -27,10 +27,11 @@
 //    derive fylkesnummer from it and look up the matching fylke's name from
 //    the (already-normalized) fylke dataset.
 //
-// The "uten havgrense" layers are user-provided Basisdata files (committed to
-// data-pipeline/source/) clipped to the actual coastline. They share the same
-// property format as the main Basisdata files, so the same normalization
-// functions apply to both variants.
+// The "uten havgrense" kommuner are a user-provided Basisdata file (committed
+// to data-pipeline/source/) clipped to the actual coastline. It shares the
+// property format of the downloaded Basisdata file, so the same normalization
+// applies, and it must come from the same Kartverket extract — checked below.
+// (Fylker uten havgrense are derived from these kommuner in step 03.)
 
 import { createRequire } from 'node:module'
 import { existsSync } from 'node:fs'
@@ -175,56 +176,72 @@ if (navnFraSsb.size > 0) {
   console.log(`[done] official names from SSB, where Kartverket's extract is behind: ${[...navnFraSsb].join('; ')}`)
 }
 
-// --- "Uten havgrense" layers (coastline-clipped, no maritime border extension) ---
+// --- "Uten havgrense" kommuner (coastline-clipped, no maritime border extension) ---
 
 const kommuneUtenRaw = await readGeonorgeCollection('kommuner-uten-havgrense.geojson', 'Kommune')
+assertSameExtract(kommuneRaw.features, kommuneUtenRaw.features)
 
 const kommuneFeaturesUtenHavgrense = kommuneUtenRaw.features
   .map((feature) => normalizeKommune(feature.properties, feature.geometry))
   .sort(byNummer('kommunenummer'))
-
-if (kommuneFeaturesUtenHavgrense.length !== kommuneFeatures.length) {
-  throw new Error(
-    `"Uten havgrense" kommune layer has ${kommuneFeaturesUtenHavgrense.length} features, ` +
-      `expected ${kommuneFeatures.length} to match the main kommune layer`,
-  )
-}
 
 await writeFile(
   path.join(workDir, 'kommuner-uten-havgrense.geojson'),
   JSON.stringify({ type: 'FeatureCollection', features: kommuneFeaturesUtenHavgrense }),
 )
 
-const fylkeUtenRaw = await readGeonorgeCollection('fylker-uten-havgrense.geojson', 'Fylke')
+console.log(
+  `[done] normalized ${kommuneFeaturesUtenHavgrense.length} "uten havgrense" kommuner ` +
+    `(extract ${extractDates(kommuneUtenRaw.features).join(', ')}, same kommune versions as the download)`,
+)
 
-const fylkeFeaturesUtenHavgrense = fylkeUtenRaw.features
-  .map((feature) => ({
-    type: 'Feature',
-    properties: {
-      fylkesnummer: feature.properties.fylkesnummer,
-      fylkesnavn: primaryName(feature.properties, 'fylkesnavn'),
-      fylkesnavnOffisielt: officialName(feature.properties, 'fylkesnavn', 'fylker', feature.properties.fylkesnummer),
-    },
-    geometry: feature.geometry,
-  }))
-  .sort(byNummer('fylkesnummer'))
+/**
+ * The coastline file is committed (data-pipeline/source/), not downloaded, so
+ * it does not follow along when the downloaded kommuner change. Both come from
+ * Kartverket's Basisdata and carry the same per-kommune identity (lokalId) and
+ * version (versjonId), which change whenever Kartverket changes a kommune:
+ * comparing them catches a stale coastline file instead of silently mixing new
+ * kommuner with old coastline borders.
+ */
+function assertSameExtract(downloaded, committed) {
+  const identity = (p) =>
+    `${p['identifikasjon.Identifikasjon.lokalId']} v${p['identifikasjon.Identifikasjon.versjonId']}`
+  const byNummer = (features) => {
+    const map = new Map()
+    const duplicates = []
+    for (const { properties: p } of features) {
+      if (map.has(p.kommunenummer)) duplicates.push(p.kommunenummer)
+      map.set(p.kommunenummer, p)
+    }
+    return { map, duplicates }
+  }
+  const med = byNummer(downloaded)
+  const uten = byNummer(committed)
 
-if (fylkeFeaturesUtenHavgrense.length !== fylkeFeatures.length) {
-  throw new Error(
-    `"Uten havgrense" fylke layer has ${fylkeFeaturesUtenHavgrense.length} features, ` +
-      `expected ${fylkeFeatures.length} to match the main fylke layer`,
-  )
+  const problems = []
+  if (uten.duplicates.length > 0) problems.push(`more than once in the coastline file: ${uten.duplicates.join(', ')}`)
+  const onlyDownloaded = [...med.map.keys()].filter((nr) => !uten.map.has(nr))
+  const onlyCommitted = [...uten.map.keys()].filter((nr) => !med.map.has(nr))
+  if (onlyDownloaded.length > 0) problems.push(`missing from the coastline file: ${onlyDownloaded.join(', ')}`)
+  if (onlyCommitted.length > 0) problems.push(`no longer in the download: ${onlyCommitted.join(', ')}`)
+  const changed = [...med.map]
+    .filter(([nr, p]) => uten.map.has(nr) && identity(p) !== identity(uten.map.get(nr)))
+    .map(([nr, p]) => `${nr} ${p.kommunenavn} (download ${identity(p)}, coastline file ${identity(uten.map.get(nr))})`)
+  if (changed.length > 0) problems.push(`changed since the coastline file was made: ${changed.join('; ')}`)
+
+  if (problems.length > 0) {
+    throw new Error(
+      `data-pipeline/source/kommuner-uten-havgrense.geojson does not match the downloaded kommuner ` +
+        `(download extract ${extractDates(downloaded).join(', ')}, ` +
+        `coastline file extract ${extractDates(committed).join(', ')}):\n  - ${problems.join('\n  - ')}\n` +
+        'Replace the coastline file with one from the same Kartverket extract (see data-pipeline/README.md).',
+    )
+  }
 }
 
-await writeFile(
-  path.join(workDir, 'fylker-uten-havgrense.geojson'),
-  JSON.stringify({ type: 'FeatureCollection', features: fylkeFeaturesUtenHavgrense }),
-)
-
-console.log(
-  `[done] normalized ${kommuneFeaturesUtenHavgrense.length} "uten havgrense" kommuner and ` +
-    `${fylkeFeaturesUtenHavgrense.length} "uten havgrense" fylker`,
-)
+function extractDates(features) {
+  return [...new Set(features.map((f) => f.properties.datauttaksdato?.slice(0, 10) ?? 'unknown'))].sort()
+}
 
 // --- Bydeler / delområder ---
 //
