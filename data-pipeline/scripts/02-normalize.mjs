@@ -27,11 +27,11 @@
 //    derive fylkesnummer from it and look up the matching fylke's name from
 //    the (already-normalized) fylke dataset.
 //
-// The "uten havgrense" kommuner are a user-provided Basisdata file (committed
-// to data-pipeline/source/) clipped to the actual coastline. It shares the
-// property format of the downloaded Basisdata file, so the same normalization
-// applies, and it must come from the same Kartverket extract — checked below.
-// (Fylker uten havgrense are derived from these kommuner in step 03.)
+// The "uten havgrense" kommuner are the downloaded kommuner clipped to a fixed
+// land mask committed to data-pipeline/source/ (see data-pipeline/README.md).
+// The coastline hardly changes, while kommuner do — clipping on every build
+// keeps the two variants in step. (Fylker uten havgrense are derived from
+// these kommuner in step 03.)
 
 import { createRequire } from 'node:module'
 import { existsSync } from 'node:fs'
@@ -41,6 +41,7 @@ import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const { feature: topoFeature } = require('topojson-client')
+const mapshaper = require('mapshaper')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rawDir = path.join(__dirname, '..', 'raw')
@@ -178,70 +179,48 @@ if (navnFraSsb.size > 0) {
 
 // --- "Uten havgrense" kommuner (coastline-clipped, no maritime border extension) ---
 
-const kommuneUtenRaw = await readGeonorgeCollection('kommuner-uten-havgrense.geojson', 'Kommune')
-assertSameExtract(kommuneRaw.features, kommuneUtenRaw.features)
+/** Share of the land mask the clipped kommuner may leave uncovered (it is 0 for the 2026 data). */
+const MAX_UNCOVERED_LAND = 0.0001
 
-const kommuneFeaturesUtenHavgrense = kommuneUtenRaw.features
-  .map((feature) => normalizeKommune(feature.properties, feature.geometry))
-  .sort(byNummer('kommunenummer'))
-
-await writeFile(
-  path.join(workDir, 'kommuner-uten-havgrense.geojson'),
-  JSON.stringify({ type: 'FeatureCollection', features: kommuneFeaturesUtenHavgrense }),
+const clipped = await mapshaper.applyCommands(
+  [
+    '-i kommuner.json landmaske.json combine-files',
+    '-clip landmaske target=kommuner',
+    '-filter "!this.isNull" target=kommuner',
+    '-o uten.json format=geojson target=kommuner',
+    '-each "areal=this.area" target=kommuner,landmaske',
+    '-o areal-kommuner.json format=json target=kommuner',
+    '-o areal-landmaske.json format=json target=landmaske',
+  ].join(' '),
+  {
+    'kommuner.json': { type: 'FeatureCollection', features: kommuneFeatures },
+    'landmaske.json': await readFile(path.join(sourceDir, 'landmaske.geojson'), 'utf-8'),
+  },
 )
+const kommunerUtenHavgrense = JSON.parse(clipped['uten.json'])
+
+const medLand = new Set(kommunerUtenHavgrense.features.map((f) => f.properties.kommunenummer))
+const utenLand = kommuneFeatures.filter((f) => !medLand.has(f.properties.kommunenummer))
+if (utenLand.length > 0) {
+  throw new Error(
+    `Kommuner with no area on the land mask: ${utenLand.map((f) => `${f.properties.kommunenummer} ${f.properties.kommunenavn}`).join(', ')}`,
+  )
+}
+
+// Land that no kommune covers means the download is incomplete, or that the
+// mask and the kommuner no longer describe the same country.
+const sumAreal = (file) => JSON.parse(clipped[file]).reduce((sum, row) => sum + row.areal, 0)
+const uncovered = 1 - sumAreal('areal-kommuner.json') / sumAreal('areal-landmaske.json')
+if (Math.abs(uncovered) > MAX_UNCOVERED_LAND) {
+  throw new Error(`The kommuner cover ${((1 - uncovered) * 100).toFixed(3)} % of the land mask, expected 100 %`)
+}
+
+await writeFile(path.join(workDir, 'kommuner-uten-havgrense.geojson'), JSON.stringify(kommunerUtenHavgrense))
 
 console.log(
-  `[done] normalized ${kommuneFeaturesUtenHavgrense.length} "uten havgrense" kommuner ` +
-    `(extract ${extractDates(kommuneUtenRaw.features).join(', ')}, same kommune versions as the download)`,
+  `[done] clipped ${kommunerUtenHavgrense.features.length} kommuner to the coastline ` +
+    `(covering ${((1 - uncovered) * 100).toFixed(4)} % of the land mask)`,
 )
-
-/**
- * The coastline file is committed (data-pipeline/source/), not downloaded, so
- * it does not follow along when the downloaded kommuner change. Both come from
- * Kartverket's Basisdata and carry the same per-kommune identity (lokalId) and
- * version (versjonId), which change whenever Kartverket changes a kommune:
- * comparing them catches a stale coastline file instead of silently mixing new
- * kommuner with old coastline borders.
- */
-function assertSameExtract(downloaded, committed) {
-  const identity = (p) =>
-    `${p['identifikasjon.Identifikasjon.lokalId']} v${p['identifikasjon.Identifikasjon.versjonId']}`
-  const byNummer = (features) => {
-    const map = new Map()
-    const duplicates = []
-    for (const { properties: p } of features) {
-      if (map.has(p.kommunenummer)) duplicates.push(p.kommunenummer)
-      map.set(p.kommunenummer, p)
-    }
-    return { map, duplicates }
-  }
-  const med = byNummer(downloaded)
-  const uten = byNummer(committed)
-
-  const problems = []
-  if (uten.duplicates.length > 0) problems.push(`more than once in the coastline file: ${uten.duplicates.join(', ')}`)
-  const onlyDownloaded = [...med.map.keys()].filter((nr) => !uten.map.has(nr))
-  const onlyCommitted = [...uten.map.keys()].filter((nr) => !med.map.has(nr))
-  if (onlyDownloaded.length > 0) problems.push(`missing from the coastline file: ${onlyDownloaded.join(', ')}`)
-  if (onlyCommitted.length > 0) problems.push(`no longer in the download: ${onlyCommitted.join(', ')}`)
-  const changed = [...med.map]
-    .filter(([nr, p]) => uten.map.has(nr) && identity(p) !== identity(uten.map.get(nr)))
-    .map(([nr, p]) => `${nr} ${p.kommunenavn} (download ${identity(p)}, coastline file ${identity(uten.map.get(nr))})`)
-  if (changed.length > 0) problems.push(`changed since the coastline file was made: ${changed.join('; ')}`)
-
-  if (problems.length > 0) {
-    throw new Error(
-      `data-pipeline/source/kommuner-uten-havgrense.geojson does not match the downloaded kommuner ` +
-        `(download extract ${extractDates(downloaded).join(', ')}, ` +
-        `coastline file extract ${extractDates(committed).join(', ')}):\n  - ${problems.join('\n  - ')}\n` +
-        'Replace the coastline file with one from the same Kartverket extract (see data-pipeline/README.md).',
-    )
-  }
-}
-
-function extractDates(features) {
-  return [...new Set(features.map((f) => f.properties.datauttaksdato?.slice(0, 10) ?? 'unknown'))].sort()
-}
 
 // --- Bydeler / delområder ---
 //
