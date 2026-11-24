@@ -1,8 +1,10 @@
 import { expect, test } from 'vitest'
+import raw from '../assets/norge-grenser.topojson?raw'
 import * as topojsonSimplify from 'topojson-simplify'
 import type { Position } from 'geojson'
 import { collection, kommune, norway } from '../test/fixtures'
 import { simplifyToDetail } from './useSimplifiedTopology'
+import type { NorwayTopologyType } from './useTopology'
 
 // A wobbly circle, so the points have different weights.
 const ring: Position[] = Array.from({ length: 200 }, (_, i) => {
@@ -27,4 +29,19 @@ test('more detail keeps more points', () => {
 
 test('full detail removes nothing', () => {
   expect(simplifyToDetail(presimplified, 100).minWeight).toBe(0)
+})
+
+test('gives the same result as topojson-simplify on the bundled map data', () => {
+  const bundled = topojsonSimplify.presimplify(JSON.parse(raw) as NorwayTopologyType)
+  for (const percent of [0, 5, 50, 75, 99]) {
+    const minWeight = topojsonSimplify.quantile(bundled, percent / 100)
+    const actual = simplifyToDetail(bundled, percent)
+    expect(actual.minWeight).toBe(minWeight)
+    expect(actual.topology.arcs).toEqual(topojsonSimplify.simplify(bundled, minWeight).arcs)
+  }
+})
+
+test('a topology without removable points is left alone', () => {
+  const empty = topojsonSimplify.presimplify(norway({ kommuner: collection() }))
+  expect(simplifyToDetail(empty, 50).topology.arcs).toEqual([])
 })
