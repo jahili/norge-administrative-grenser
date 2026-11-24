@@ -231,7 +231,7 @@ function failIf(problems, heading) {
 
 /** A raw Kartverket kommune layer from 01-download, reduced to kommunenummer. */
 async function readKommuner(file) {
-  const json = JSON.parse((await readFile(path.join(rawDir, file), 'utf-8')).replace(/^﻿/, ''))
+  const json = JSON.parse((await readFile(path.join(rawDir, file), 'utf-8')).replace(/^\uFEFF/, ''))
   return {
     type: 'FeatureCollection',
     features: json.features
@@ -346,7 +346,7 @@ async function downloadGrunnkretser() {
     // The zip also holds the border lines (…_Grense_…); we want the areas.
     const [areas] = (await readdir(extractDir)).filter((f) => /Grunnkrets.*\.geojson$/.test(f))
     if (!areas) throw new Error('No grunnkrets GeoJSON in the Geonorge zip')
-    const text = (await readFile(path.join(extractDir, areas), 'utf-8')).replace(/^﻿/, '')
+    const text = (await readFile(path.join(extractDir, areas), 'utf-8')).replace(/^\uFEFF/, '')
     await writeFile(finalPath, text, 'utf-8')
     await rm(zipPath, { force: true })
     await rm(extractDir, { recursive: true, force: true })
