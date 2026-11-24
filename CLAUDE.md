@@ -24,7 +24,7 @@ Før commit: `npx tsc -b && npx eslint . && npm test && npm run build`. `npm ci`
 ## Arkitektur
 
 **Data (bygges av `data-pipeline/`, committes):**
-- `src/assets/norge-grenser.topojson` (~5,9 MB) – hovedfilen appen laster ved oppstart: fylker,
+- `src/assets/norge-grenser.topojson` (~5,8 MB) – hovedfilen appen laster ved oppstart: fylker,
   kommuner, bydeler og alle distriktinndelingene, med og uten havgrense, i én delt topologi.
 - `src/assets/grunnkretser/<fylkesnummer>.topojson` + `index.json` – grunnkretser, delområder og
   levekårssoner, én fil per fylke, som appen bare henter når noen slår på grunnkretser.
@@ -111,10 +111,12 @@ Kommuner, grunnkretser og navn endres som regel 1. januar.
 3. **BA-regionene** (`data-pipeline/source/bo_og_arbeidsmarkedsregioner_2024.csv`) er TØIs inndeling
    fra 2019, kodet om til kommunestrukturen 2024. Endres kommunestrukturen, må tabellen kodes om
    (nye kommunenumre, sammenslåinger, delinger) – ellers stopper steg 05.
-4. Sammenlign med forrige versjon (antall lag, kommuner, endrede felter), oppdater «Kartdata 2026»
+4. **110-distriktene** har egne numre (`data-pipeline/source/distrikter110.csv`), koblet på DSBs navn. Stopper steg 05
+   på navn: rett navnet ved omdøping, gi et nytt, ubrukt nummer hvis distriktet er endret.
+5. Sammenlign med forrige versjon (antall lag, kommuner, endrede felter), oppdater «Kartdata 2026»
    (`KARTDATA_AAR` i `src/components/Header.tsx`) og lasteteksten i `App.tsx` hvis filen ikke lenger er
    ca. 2 MB komprimert (GitHub Pages sender den med gzip).
-5. `npx tsc -b && npx eslint . && npm test && npm run build`, commit, `npm run deploy`.
+6. `npx tsc -b && npx eslint . && npm test && npm run build`, commit, `npm run deploy`.
 
 ## Praktisk
 

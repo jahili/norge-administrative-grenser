@@ -4,6 +4,7 @@ import * as topojsonClient from 'topojson-client'
 import type { FeatureCollection, Position } from 'geojson'
 import type { GeometryCollection } from 'topojson-specification'
 import raw from './assets/norge-grenser.topojson?raw'
+import numre110 from '../data-pipeline/source/distrikter110.csv?raw'
 import type { NorwayTopologyType } from './hooks/useTopology'
 import { DISTRIKT_KIND_LIST, DISTRIKT_KINDS } from './lib/distrikter'
 import type { AreaGeometry } from './lib/types'
@@ -46,4 +47,13 @@ describe.each(DISTRIKT_KIND_LIST)('%s', (kind) => {
     const navn = new Map(properties(objects.med).map((p) => [p[idField], p[nameField]]))
     expect(kommuner.filter((k) => !k[nameField] || k[nameField] !== navn.get(k[idField]))).toEqual([])
   })
+})
+
+test('the 110-distrikter have the numbers in the source table, and no other id', () => {
+  const tabell = numre110.trim().split(/\r?\n/).slice(1).sort()
+  const distrikter = properties('distrikter110')
+  expect(distrikter.map((p) => `${p.distrikt110nummer},${p.distrikt110navn}`).sort()).toEqual(tabell)
+  for (const p of [...distrikter, ...properties('kommuner'), ...properties('kommunerUtenHavgrense')]) {
+    expect(p).not.toHaveProperty('distrikt110id')
+  }
 })

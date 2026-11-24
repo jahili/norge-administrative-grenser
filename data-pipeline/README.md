@@ -100,7 +100,11 @@ kjøres.
   og kommuneinndelingen. SSBs 110-klassifikasjon (427) er fra 2019 og har ingen
   kommunekobling, så 110-distriktene hentes fra DSBs Brannalarmsentraler-WFS og
   kommunene tilordnes etter arealoverlapp. Steget feiler heller enn å gjette hvis
-  en kommune ikke ligger minst 98 % i ett distrikt.
+  en kommune ikke ligger minst 98 % i ett distrikt. DSBs `lokalId` endres når
+  dataene publiseres på nytt, så numrene (`d01` …) står i `source/distrikter110.csv`
+  og kobles på navnet. Steget feiler hvis navnene ikke er nøyaktig de samme: rett
+  navnet hvis en sentral er omdøpt, og gi et nytt, ubrukt nummer hvis selve
+  distriktet er endret. Nye grenser under samme navn oppdages ikke.
   To fallgruver: `mergeArcs` kjøres mot en 2D-kopi av buene, fordi den ellers
   sammenligner endepunkter med og uten presimplify-vekten og aldri får lukket
   ringene. Og steget skriver rett i `src/assets/`-filen og er idempotent, så det

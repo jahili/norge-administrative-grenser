@@ -90,7 +90,7 @@ deler samme buesett (arcs):
 | `baregioner` / `…UtenHavgrense` | 159 bo- og arbeidsmarkedsregioner (TØI, kodet om til 2024, se under) |
 
 Distriktlagene er satt sammen av kommunene. Kommunelagene har i tillegg et nummer- og
-navnefelt per inndeling (`politidistriktnummer`/`politidistriktnavn`, `distrikt110id`/`distrikt110navn`,
+navnefelt per inndeling (`politidistriktnummer`/`politidistriktnavn`, `distrikt110nummer`/`distrikt110navn`,
 `valgdistriktnummer`/`valgdistriktnavn`, `okonomiskregionnummer`/`okonomiskregionnavn`,
 `landsdelnummer`/`landsdelnavn`, `helseregionnummer`/`helseregionnavn` osv., se `DISTRIKT_KINDS`
 i `src/lib/distrikter.ts`), så en kommuneeksport viser hvilke distrikter hver kommune hører til.
@@ -135,7 +135,8 @@ distriktene sine, og slår kommunene sammen til distriktlag (`topojson-client`s
 `mergeArcs`) — slik at distriktene deler grenser nøyaktig med kommunene. Inndelingene er
 beskrevet i én liste (`DISTRIKTER`) i skriptet; en ny SSB-inndeling er én oppføring der og
 én i `src/lib/distrikter.ts`. Steget feiler hvis en kommune mangler distrikt, ligger i flere,
-eller (for 110) ikke ligger minst 98 % i ett DSB-distrikt.
+eller (for 110) ikke ligger minst 98 % i ett DSB-distrikt, og hvis DSBs 110-distrikter ikke har samme
+navn som i [`distrikter110.csv`](data-pipeline/source/distrikter110.csv).
 
 Kommuner og fylker har både norsk navn (`kommunenavn`/`fylkesnavn`) og fullt offisielt navn med
 samiske og kvenske navn (`kommunenavnOffisielt`/`fylkesnavnOffisielt`, f.eks.
@@ -187,7 +188,9 @@ Grunnlagsdataene er samlet i [Kart-fylker-og-kommuner-json](https://github.com/j
 - **Landsdeler:** [SSB, Standard for landsdelsinndeling](https://www.ssb.no/klass/klassifikasjoner/106)
   (koblingstabell mot fylkesinndelingen)
 - **110-distrikter:** [DSB, Brannalarmsentraler](https://kartkatalog.geonorge.no/metadata/c4436a5f-1e22-461a-8209-786f7052acb5)
-  (SSBs egen 110-klassifikasjon er fra 2019 og mangler kobling mot kommuner)
+  (SSBs egen 110-klassifikasjon er fra 2019 og mangler kobling mot kommuner). DSBs id-er endres når
+  dataene publiseres på nytt, så `distrikt110nummer` (`d01`–`d12`) er laget for appen og erstatter
+  `distrikt110id`, som lå i filene til og med november 2026
 - **Kystlinje (uten havgrense):** Robert Hopland har laget kommunene klippet etter kystlinjen, som
   [landmasken](data-pipeline/source/landmaske.geojson) er slått sammen av
 - Klipping og konvertering av kildedata er gjort i [Mapshaper](https://mapshaper.org/)

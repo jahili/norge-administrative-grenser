@@ -69,7 +69,7 @@ export function kolonneInfo(kolonne: string): KolonneInfo | undefined {
       return {
         beskrivelse:
           kind === 'distrikter110'
-            ? `Id for ${entall}et (DSBs lokalId)`
+            ? 'Nummer for 110-distriktet, «d01» til «d12». Laget av appen, siden DSB ikke har faste id-er; endres bare når distriktene endres'
             : `Kode for ${entall} i SSBs klassifikasjon`,
         kilde: { navn: kilde, url: kildeUrl },
       }
