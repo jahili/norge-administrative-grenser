@@ -95,8 +95,10 @@ export function useGrunnkretsUtvalg({
   )
 
   // Grunnkretser, delområder or levekårssoner for the map include the left-out
-  // ones, so they can be clicked back in.
-  const kart = useMemo(() => {
+  // ones, so they can be clicked back in. They are built apart from the
+  // selection, so leaving something out keeps the geometries and the map can
+  // restyle its layers instead of building them again.
+  const alle = useMemo(() => {
     if (!active) return null
     const args: FeatureArgs = [
       [...state.topologies.values()],
@@ -107,42 +109,45 @@ export function useGrunnkretsUtvalg({
       kommuneByNummer,
       gruppeKind,
     ]
-    if (nivå === 'levekarssoner') {
-      return kartOmrader(grunnkretsFeatures('levekarssoner', ...args), (p) => ({
-        navn: p.levekarssonenavn,
-        nummer: p.levekarssonenummer,
-        kontekst: p.kommunenavn,
-        selected: !utelatteLevekarssoner.has(p.levekarssonenummer),
-        handling: { type: 'levekarssone', id: p.levekarssonenummer },
-      }))
+    switch (nivå) {
+      case 'levekarssoner':
+        return { nivå, features: grunnkretsFeatures(nivå, ...args) }
+      case 'delomrader':
+        return { nivå, features: grunnkretsFeatures(nivå, ...args) }
+      case 'grunnkretser':
+        return { nivå, features: grunnkretsFeatures(nivå, ...args) }
     }
-    return nivå === 'delomrader'
-      ? kartOmrader(grunnkretsFeatures('delomrader', ...args), (p) => ({
+  }, [active, nivå, state.topologies, medHavgrense, minWeight, selectedKommuner, kommuneByNummer, gruppeKind])
+  const kart = useMemo(() => {
+    switch (alle?.nivå) {
+      case undefined:
+        return null
+      case 'levekarssoner':
+        return kartOmrader(alle.features, (p) => ({
+          navn: p.levekarssonenavn,
+          nummer: p.levekarssonenummer,
+          kontekst: p.kommunenavn,
+          selected: !utelatteLevekarssoner.has(p.levekarssonenummer),
+          handling: { type: 'levekarssone', id: p.levekarssonenummer },
+        }))
+      case 'delomrader':
+        return kartOmrader(alle.features, (p) => ({
           navn: p.delomradenavn,
           nummer: p.delomradenummer,
           kontekst: p.kommunenavn,
           selected: !utelatteDelomrader.has(p.delomradenummer),
           handling: { type: 'delomrade', id: p.delomradenummer },
         }))
-      : kartOmrader(grunnkretsFeatures('grunnkretser', ...args), (p) => ({
+      case 'grunnkretser':
+        return kartOmrader(alle.features, (p) => ({
           navn: p.grunnkretsnavn,
           nummer: p.grunnkretsnummer,
           kontekst: `${p.kommunenavn} · ${p.delomradenavn}`,
           selected: !utelatteDelomrader.has(p.delomradenummer),
           handling: { type: 'delomrade', id: p.delomradenummer },
         }))
-  }, [
-    active,
-    nivå,
-    state.topologies,
-    medHavgrense,
-    minWeight,
-    selectedKommuner,
-    utelatteDelomrader,
-    utelatteLevekarssoner,
-    kommuneByNummer,
-    gruppeKind,
-  ])
+    }
+  }, [alle, utelatteDelomrader, utelatteLevekarssoner])
 
   function changeUtelatte(numre: string[], include: boolean) {
     const setUtelatte = underomradeNivå === 'levekarssoner' ? setUtelatteLevekarssoner : setUtelatteDelomrader

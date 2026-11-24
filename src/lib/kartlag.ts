@@ -39,6 +39,19 @@ export function kartOmrader<P>(
   })
 }
 
+/**
+ * Whether two collections hold the very same areas — at most in another order
+ * or with another selection state — so drawn layers can be kept.
+ */
+export function sammeOmrader(
+  a: FeatureCollection<AreaGeometry, KartOmrade>,
+  b: FeatureCollection<AreaGeometry, KartOmrade>,
+): boolean {
+  if (a.features.length !== b.features.length) return false
+  const geometries = new Map(a.features.map((f) => [f.properties.key, f.geometry]))
+  return b.features.every((f) => geometries.get(f.properties.key) === f.geometry)
+}
+
 /** The tooltip's call to action for an area. */
 export function handlingTekst({ handling, selected }: KartOmrade): string {
   if (handling.type === 'delomrade') {

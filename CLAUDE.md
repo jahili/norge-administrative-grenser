@@ -69,7 +69,9 @@ står i to soner eller ligger i feil kommune, eller hvis en LKS-kommune ikke er 
 kan man utelate enkeltsoner på LKS-nivået (eget utvalg, uavhengig av utelatte delområder, siden sonene
 ikke følger delområdegrensene).
 - `components/MapView.tsx` – kartet tegner alle områder selv (`lib/kartlag.ts`); klikk slår valg
-  av og på. Bakgrunnsfliser: CARTO uten stedsnavn, med API-nøkkel (offentlig i koden, som alle
+  av og på. Er områdene de samme (`sammeOmrader`: samme geometriobjekter), får lagene bare ny stil; ellers bygges de på
+  nytt. Geometrien må derfor ikke lages på nytt når bare utvalget endres.
+  Bakgrunnsfliser: CARTO uten stedsnavn, med API-nøkkel (offentlig i koden, som alle
   nettleser-kartnøkler; bytt den der hvis kvoten misbrukes).
 - Designtokens (lyst/mørkt) i `src/index.css`; komponenter bruker Tailwind-klassene `bg-surface`,
   `text-ink`, `text-muted`, `border-line`, `text-accent` osv. Designreferansen er «redesign A»
