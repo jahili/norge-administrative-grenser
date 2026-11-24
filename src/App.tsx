@@ -50,7 +50,7 @@ function App() {
         <div className="flex flex-1 items-center justify-center p-6">
           {topologyState.status === 'loading' ? (
             <p role="status" className="flex items-center gap-3 text-ink-2">
-              <Spinner /> Laster inn kartdata (5,9 MB) …
+              <Spinner /> Laster inn kartdata (ca. 2 MB) …
             </p>
           ) : (
             <p role="alert" className="text-red-700 dark:text-red-400">
