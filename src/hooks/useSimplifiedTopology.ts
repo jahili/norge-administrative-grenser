@@ -41,7 +41,29 @@ export function simplifyToDetail(
   detailPercent: number,
 ): { topology: NorwayTopologyType; minWeight: number } {
   if (detailPercent >= 100) return { topology: presimplified, minWeight: 0 }
-  const quantile = detailPercent / 100
-  const minWeight = topojsonSimplify.quantile(presimplified, quantile)
+  const minWeight = weightQuantile(presimplified, detailPercent / 100)
   return { topology: topojsonSimplify.simplify(presimplified, minWeight), minWeight }
+}
+
+/** The finite weights of a presimplified topology, in descending order. */
+const sortedWeights = new WeakMap<NorwayTopologyType, Float64Array>()
+
+/**
+ * Same result as topojson-simplify's `quantile`, which sorts every weight
+ * (almost 200 000) again on each call — most of the cost of moving the slider.
+ */
+function weightQuantile(presimplified: NorwayTopologyType, p: number): number {
+  let weights = sortedWeights.get(presimplified)
+  if (!weights) {
+    // Arc endpoints have infinite weight and are never removed.
+    const points = presimplified.arcs.flat() as unknown as [number, number, number][]
+    weights = Float64Array.from(points.map((point) => point[2]).filter(Number.isFinite)).sort().reverse()
+    sortedWeights.set(presimplified, weights)
+  }
+  const last = weights.length - 1
+  if (last < 0) return 0
+  const position = last * p
+  const index = Math.floor(position)
+  const weight = weights[index]
+  return index < last ? weight + (weights[index + 1] - weight) * (position - index) : weight
 }

@@ -5,7 +5,7 @@ import L from 'leaflet'
 import type { Map as LeafletMap, Path, PathOptions } from 'leaflet'
 import type { FeatureCollection, Position } from 'geojson'
 import type { AreaGeometry } from '../lib/types'
-import { handlingTekst } from '../lib/kartlag'
+import { handlingTekst, sammeOmrader } from '../lib/kartlag'
 import type { KartFeature, KartHandling, KartOmrade } from '../lib/kartlag'
 import type { Theme } from '../hooks/useTheme'
 import { IconButton } from './ui'
@@ -42,17 +42,7 @@ const STYLE: Record<Theme, Record<'unselected' | 'selected' | 'hover', PathOptio
   },
 }
 
-/** react-leaflet's <GeoJSON> ignores new data, so it is re-mounted per collection. */
-const collectionIds = new WeakMap<object, number>()
-let nextCollectionId = 0
-function collectionId(collection: object): number {
-  let id = collectionIds.get(collection)
-  if (id === undefined) {
-    id = nextCollectionId++
-    collectionIds.set(collection, id)
-  }
-  return id
-}
+type OmradeLayer = Path & { feature: KartFeature }
 
 interface MapViewProps {
   /** Every area to draw, with selection state and click action. */
@@ -92,6 +82,14 @@ export function MapView({
   const [hover, setHover] = useState<{ omrade: KartOmrade; left?: number; right?: number; top: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const fromMapClick = useRef(false)
+  const lagRef = useRef<L.GeoJSON>(null)
+  // react-leaflet's <GeoJSON> ignores new data, so it is re-mounted when the
+  // areas are new. When only the selection changed, the layers are kept and
+  // restyled below: building thousands of them is the slow part of a click.
+  const [lag, setLag] = useState({ omrader, generation: 0 })
+  if (lag.omrader !== omrader) {
+    setLag({ omrader, generation: sammeOmrader(lag.omrader, omrader) ? lag.generation : lag.generation + 1 })
+  }
   const onHandlingRef = useRef(onHandling)
   const fitTargetRef = useRef(fitTarget)
   useEffect(() => {
@@ -130,35 +128,68 @@ export function MapView({
 
   const onEachFeature = useCallback(
     (feature: KartFeature, layer: L.Layer) => {
-      const path = layer as Path
-      const omrade = feature.properties
-      const base = () => (omrade.selected ? STYLE[theme].selected : STYLE[theme].unselected)
+      const path = layer as OmradeLayer
+      // Read on every event, since the selection can change under the layer.
+      const current = () => path.feature?.properties ?? feature.properties
+      const base = () => (current().selected ? STYLE[theme].selected : STYLE[theme].unselected)
+      let highlighted = false
+      const highlight = () => {
+        if (highlighted) return
+        highlighted = true
+        path.setStyle(STYLE[theme].hover)
+        path.bringToFront()
+      }
       const show = (e: L.LeafletMouseEvent) => {
         const width = containerRef.current?.clientWidth ?? 0
         const { x, y } = e.containerPoint
+        const omrade = current()
         setHover(x > width - 280 ? { omrade, right: width - x + 14, top: y + 14 } : { omrade, left: x + 14, top: y + 14 })
       }
       path.on({
         mouseover: (e: L.LeafletMouseEvent) => {
-          path.setStyle(STYLE[theme].hover)
-          path.bringToFront()
+          highlight()
           show(e)
         },
-        mousemove: show,
+        // A click ends the highlight, so the new state shows until the mouse moves.
+        mousemove: (e: L.LeafletMouseEvent) => {
+          highlight()
+          show(e)
+        },
         mouseout: () => {
+          highlighted = false
           path.setStyle(base())
+          // Selected areas stay on top, so their outlines are not covered.
+          if (!current().selected) path.bringToBack()
           setHover(null)
         },
         click: (e: L.LeafletMouseEvent) => {
           L.DomEvent.stopPropagation(e)
           fromMapClick.current = true
+          highlighted = false
+          path.setStyle(base())
           setHover(null)
-          onHandlingRef.current(omrade.handling)
+          onHandlingRef.current(current().handling)
         },
       })
     },
     [theme],
   )
+
+  // Gives the kept layers their new selection state.
+  useEffect(() => {
+    const features = new Map(omrader.features.map((f) => [f.properties.key, f]))
+    lagRef.current?.eachLayer((layer) => {
+      const path = layer as OmradeLayer
+      const feature = features.get(path.feature.properties.key)
+      if (!feature || feature === path.feature) return
+      const changed = feature.properties.selected !== path.feature.properties.selected
+      path.feature = feature
+      if (!changed) return
+      path.setStyle(style(feature))
+      if (feature.properties.selected) path.bringToFront()
+      else path.bringToBack()
+    })
+  }, [omrader, style])
 
   return (
     <div ref={containerRef} className="relative h-full min-h-0 w-full overflow-hidden bg-sea">
@@ -176,7 +207,8 @@ export function MapView({
       >
         <TileLayer key={`tiles-${theme}`} attribution={TILE_ATTRIBUTION} url={TILES[theme]} opacity={0.3} />
         <GeoJSON
-          key={`omrader-${collectionId(omrader)}-${theme}`}
+          ref={lagRef}
+          key={`omrader-${lag.generation}-${theme}`}
           data={omrader}
           style={style as (feature?: GeoJSON.Feature) => PathOptions}
           onEachFeature={onEachFeature as (feature: GeoJSON.Feature, layer: L.Layer) => void}
