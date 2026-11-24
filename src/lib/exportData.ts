@@ -90,7 +90,7 @@ export function buildExport(
   granularity: ExportGranularity,
   format: ExportFormat,
 ): { blob: Blob; extension: string } {
-  features = withConsistentWinding(features)
+  features = withCleanRings(features)
   if (format === 'geojson') {
     const json = JSON.stringify(features)
     return { blob: new Blob([json], { type: 'application/geo+json' }), extension: 'geojson' }
@@ -109,14 +109,18 @@ function ringArea(ring: Position[]): number {
 }
 
 /**
- * Every exterior ring clockwise and every hole counter-clockwise — the
- * winding the bundled data uses, and what d3 expects. The detail slider can
- * flip tiny islets (a few points, a few hundred m²) inside out, which tools
- * that honour winding would then draw as covering the rest of the world.
+ * Two-dimensional positions, every exterior ring clockwise and every hole
+ * counter-clockwise — the winding the bundled data uses, and what d3 expects.
+ * The detail slider can flip tiny islets (a few points, a few hundred m²)
+ * inside out, which tools that honour winding would then draw as covering the
+ * rest of the world. At full detail the points also carry their simplification weight as a third
+ * number (Infinity, so null in JSON, at the ends of every arc).
  */
-function withConsistentWinding<F extends FeatureCollection<AreaGeometry>>(collection: F): F {
-  const fixRing = (ring: Position[], exterior: boolean) =>
-    (exterior ? ringArea(ring) > 0 : ringArea(ring) < 0) ? [...ring].reverse() : ring
+function withCleanRings<F extends FeatureCollection<AreaGeometry>>(collection: F): F {
+  const fixRing = (ring: Position[], exterior: boolean) => {
+    const flat = ring.map(([lon, lat]): Position => [lon, lat])
+    return (exterior ? ringArea(flat) > 0 : ringArea(flat) < 0) ? flat.reverse() : flat
+  }
   const fixPolygon = (polygon: Position[][]) => polygon.map((ring, i) => fixRing(ring, i === 0))
   return {
     ...collection,
