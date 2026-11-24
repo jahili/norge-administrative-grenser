@@ -28,3 +28,17 @@ export function dataColumns(rows: Record<string, string>[], example: Record<stri
 export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
+
+/** The map card's title: the selected groups' names, shortened when there are more than two. */
+export function utvalgTittel(navn: string[]): string {
+  if (navn.length === 0) return 'Ingen utvalg ennå'
+  if (navn.length <= 2) return navn.join(' og ')
+  return `${navn.slice(0, 2).join(', ')} +${navn.length - 2}`
+}
+
+/** The map card's second line: what the download contains. */
+export function utvalgDetaljer(granularity: ExportGranularity, featureCount: number, kolonner: number): string {
+  if (featureCount === 0) return 'Klikk i kartet eller velg i listen'
+  const { entall, flertall } = levelWords(granularity)
+  return `${featureCount} ${featureCount === 1 ? entall : flertall} · ${kolonner} kolonner`
+}

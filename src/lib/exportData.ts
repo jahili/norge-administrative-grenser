@@ -15,6 +15,8 @@ import type {
   ExportFormat,
   ExportGranularity,
   FylkeProperties,
+  GrunnkretsNivå,
+  GruppeKind,
   KommuneProperties,
 } from './types'
 
@@ -154,4 +156,30 @@ export function buildCsv(columns: string[], rows: Record<string, string>[]): Blo
   const quote = (value: string) => `"${value.replaceAll('"', '""')}"`
   const lines = [columns.map(quote).join(';'), ...rows.map((row) => columns.map((c) => quote(row[c] ?? '')).join(';'))]
   return new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+}
+
+/**
+ * What gets downloaded follows the deepest selection level the user has made —
+ * no separate radio button needed. `grunnkretsNivå` is null when that level
+ * is not in use.
+ */
+export function exportGranularity({
+  gruppeKind,
+  grunnkretsNivå,
+  grupper,
+  kommuner,
+  bydeler,
+}: {
+  gruppeKind: GruppeKind
+  grunnkretsNivå: GrunnkretsNivå | null
+  /** Number of selected groups, kommuner and bydeler. */
+  grupper: number
+  kommuner: number
+  bydeler: number
+}): ExportGranularity {
+  if (grunnkretsNivå) return grunnkretsNivå
+  if (bydeler > 0) return 'bydeler'
+  if (kommuner > 0) return 'kommuner'
+  if (grupper > 0) return gruppeKind
+  return gruppeKind === 'fylker' ? 'kommuner' : gruppeKind
 }

@@ -7,6 +7,7 @@ import { collection, kommune, norway, square } from '../test/fixtures'
 import {
   buildCsv,
   buildExport,
+  exportGranularity,
   selectedBydelFeatureCollection,
   selectedDistriktFeatureCollection,
   selectedFeatureCollection,
@@ -84,6 +85,27 @@ describe('buildExport', () => {
     expect(extension).toBe('topojson')
     expect(Object.keys(topology.objects)).toEqual(['kommuner'])
     expect(topology.arcs).toHaveLength(3)
+  })
+})
+
+describe('exportGranularity', () => {
+  const none = { gruppeKind: 'fylker', grunnkretsNivå: null, grupper: 0, kommuner: 0, bydeler: 0 } as const
+
+  test('follows the deepest selection', () => {
+    expect(exportGranularity({ ...none, grupper: 1 })).toBe('fylker')
+    expect(exportGranularity({ ...none, grupper: 1, kommuner: 1 })).toBe('kommuner')
+    expect(exportGranularity({ ...none, grupper: 1, kommuner: 1, bydeler: 1 })).toBe('bydeler')
+    expect(exportGranularity({ ...none, grupper: 1, kommuner: 1, bydeler: 1, grunnkretsNivå: 'delomrader' })).toBe('delomrader')
+  })
+
+  test('with a district kind', () => {
+    expect(exportGranularity({ ...none, gruppeKind: 'politidistrikter', grupper: 1 })).toBe('politidistrikter')
+    expect(exportGranularity({ ...none, gruppeKind: 'politidistrikter', grupper: 1, kommuner: 1 })).toBe('kommuner')
+  })
+
+  test('with nothing selected', () => {
+    expect(exportGranularity(none)).toBe('kommuner')
+    expect(exportGranularity({ ...none, gruppeKind: 'politidistrikter' })).toBe('politidistrikter')
   })
 })
 
